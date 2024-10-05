@@ -12,6 +12,13 @@ If anyone can be bothered to research a compatible numpy version, which doesnt c
 the code, please do. Before submitting the project this should be fixed!!
 
 
+### Install Ollama on cluster ###
+
+Install Ollama:
+`curl -L https://ollama.com/download/ollama-linux-amd64.tgz -o ollama-linux-amd64.tgz
+sudo tar -C /usr -xzf ollama-linux-amd64.tgz`
+
+
 
 ### Current Status ###
 

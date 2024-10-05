@@ -1,4 +1,4 @@
-import utils.requests as req
+import utils.req as req
 from classes.sentence_transformer import SentenceTransformer
 
 class EnvironmentConverter():
