@@ -1,16 +1,19 @@
 ### READ THIS ###
     
-The current code will still throw an error, as the gym version uses an outdated numpy library.
+Run 
 
-Go to ".../venv/Lib/site-packages/gym/utils/passive_env_checker.py" and swap:
+conda env create -p [SomePath]\.conda -f environment/environment.yaml
 
-np.bool8 -> np.bool
+then conda activate [SomePath]\.conda
 
-in lines: 225, 233, 237
+replacing [SomePath]
 
-If anyone can be bothered to research a compatible numpy version, which doesnt crash the rest of
-the code, please do. Before submitting the project this should be fixed!!
+It should install everything needed. This assumes Cuda12.4. Change as needed - or remove pytorch gpu altogether if needed.  
 
+Tensorboard is installed as well to monitor training.
+
+to run:
+tensorboard --logdir [SomePath]\runs
 
 ### Install Ollama on cluster ###
 
@@ -18,11 +21,11 @@ Install Ollama:
 `curl -L https://ollama.com/download/ollama-linux-amd64.tgz -o ollama-linux-amd64.tgz
 sudo tar -C /usr -xzf ollama-linux-amd64.tgz`
 
-
-
 ### Current Status ###
 
-This codebase is designed to work on the CartPole environment (you can test that as well), so the PPO algorithm is "correct" in theory. There are still some issues with convergence using the FrozenLake environment, i'm assuming this is due to the 1-dim input + discriminate output and/or resulting issues with exploration or gradient calculation, so don't worry if the algorithm does not converge for you in the current setting, it didn't for me either.
+PPO Algo taken from https://github.com/Chris-hughes10/simple-ppo, with a tutorial explaining everything very nicely by the same guy here https://medium.com/@chris.p.hughes10/understanding-ppo-a-game-changer-in-ai-decision-making-explained-for-rl-newcomers-913a0bc98d2b
+
+Did few small changes to make it work for FrozenLake. Works out of box for cartpole and Cheetah. 
 
 our main focus should be on the ppo-llm portion, where i have proposed a general structure we could follow, but feel free to put your own spin on it as well. suggestions are made purely on the basis of them seeming the easiest/most effective way to do things after some quick research.
 

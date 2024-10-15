@@ -8,6 +8,9 @@ from torch.distributions.categorical import Categorical
 class ActorNetwork(nn.Module):
     def __init__(self, n_actions, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(ActorNetwork, self).__init__()
+
+        if not os.path.exists(chkpt_dir):
+            os.makedirs(chkpt_dir)
         
         self.checkpoint_file = os.path.join(chkpt_dir, 'actor_torch_ppo')
         self.actor = nn.Sequential(

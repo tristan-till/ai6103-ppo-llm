@@ -7,6 +7,9 @@ import torch.optim as optim
 class CriticNetwork(nn.Module):
     def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(CriticNetwork, self).__init__()
+
+        if not os.path.exists(chkpt_dir):
+            os.makedirs(chkpt_dir)
         
         self.checkpoint_file = os.path.join(chkpt_dir, 'critic_torch_ppo')
         self.critic = nn.Sequential(
