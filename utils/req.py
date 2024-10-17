@@ -19,7 +19,7 @@ def get_llava(image):
     """
     payload = {
         "model": "llava:7b",
-        "prompt": "This is the environment for a reinforcement agent. The agent, which has green clothing, must reach the present without touching the lakes. Please describe the environment as concise as possible",
+        "prompt": "Where are the character, presents and lakes (only those adjacent to the character) in the scene? Do not describe the way they look. Answer with as little words as possible. E.g. 'Character top left, present bottom right, lake below the character'; 'Character middle-left, present bottom right, lake right of character'",
         "images": [image]
     }
 
@@ -47,11 +47,11 @@ def get_llama(prompt):
     """
     payload = {
         "model": "llama3.2:1b",
-        "prompt": prompt
+        "prompt": f"Please summarize the information in this description. It is a rendered frame of a reinforcement learning algorithm. Focus on the position of the agent, the present. The character must avoid lakes. Answer with as little words as possible (e.g. character bottom left, present bottom right, lake on top of the character): {prompt}"
     }
 
     response = requests.post(CONST.OLLAMA_BASE_URL, json=payload, stream=True)
-
+    
     full_response = ""
     for line in response.iter_lines():
         if line:
@@ -59,11 +59,8 @@ def get_llama(prompt):
             full_response += data.get('response', '')
             if data.get('done', False):
                 break
-
+    
     return full_response.strip()
-# Example usage:
-# image = "<path_or_image_data>"
-# print(get_llava(image))
 
 if __name__ == '__main__':
     prompt = "Is Thomas Mueller a more accomplished footballer than Neymar?"

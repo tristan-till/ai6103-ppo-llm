@@ -166,3 +166,5 @@ plots/
 tmp/
 videos/
 runs/*/events.out.tfevents.*
+
+states/
