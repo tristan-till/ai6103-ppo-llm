@@ -167,4 +167,8 @@ tmp/
 videos/
 runs/*/events.out.tfevents.*
 
-states/
+states/**
+!states/embedding/
+!states/embedding/**
+
+runs/

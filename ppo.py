@@ -1,84 +1,11 @@
-from uuid import uuid4
+
 
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
 
-
-class LinearLRSchedule:
-    def __init__(self, optimizer, initial_lr, total_updates):
-        self.optimizer = optimizer
-        self.initial_lr = initial_lr
-        self.total_updates = total_updates
-        self.current_update = 0
-
-    def step(self):
-        self.current_update += 1
-        frac = 1.0 - (self.current_update - 1.0) / self.total_updates
-        lr = frac * self.initial_lr
-        for param_group in self.optimizer.param_groups:
-            param_group["lr"] = lr
-
-    def get_lr(self):
-        return [group["lr"] for group in self.optimizer.param_groups]
-
-
-class PPOLogger:
-    def __init__(self, run_name=None, use_tensorboard=False):
-        self.use_tensorboard = use_tensorboard
-        self.global_steps = []
-        if self.use_tensorboard:
-            run_name = str(uuid4()).hex if run_name is None else run_name
-            self.writer = SummaryWriter(f"runs/{run_name}")
-
-    def log_rollout_step(self, infos, global_step):
-        self.global_steps.append(global_step)
-        if "final_info" in infos:
-            for info in infos["final_info"]:
-                if info and "episode" in info:
-                    print(
-                        f"global_step={global_step}, episodic_return={info['episode']['r']}",
-                        flush=True,
-                    )
-
-                    if self.use_tensorboard:
-                        self.writer.add_scalar(
-                            "charts/episodic_return", info["episode"]["r"], global_step
-                        )
-                        self.writer.add_scalar(
-                            "charts/episodic_length", info["episode"]["l"], global_step
-                        )
-
-    def log_policy_update(self, update_results, global_step):
-        if self.use_tensorboard:
-            self.writer.add_scalar(
-                "losses/policy_loss", update_results["policy_loss"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/value_loss", update_results["value_loss"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/entropy_loss", update_results["entropy_loss"], global_step
-            )
-
-            self.writer.add_scalar(
-                "losses/kl_divergence", update_results["old_approx_kl"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/kl_divergence", update_results["approx_kl"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/clipping_fraction",
-                update_results["clipping_fractions"],
-                global_step,
-            )
-            self.writer.add_scalar(
-                "losses/explained_variance",
-                update_results["explained_variance"],
-                global_step,
-            )
-
+from classes.linear_lr_schedule import LinearLRSchedule
+from classes.ppo_logger import PPOLogger
 
 class PPO:
     def __init__(
@@ -86,23 +13,8 @@ class PPO:
         agent,
         optimizer,
         envs,
-        learning_rate=3e-4,
-        num_rollout_steps=2048,
-        num_envs=1,
-        gamma=0.99,
-        gae_lambda=0.95,
-        surrogate_clip_threshold=0.2,
-        entropy_loss_coefficient=0.01,
-        value_function_loss_coefficient=0.5,
-        max_grad_norm=0.5,
-        update_epochs=10,
-        num_minibatches=32,
-        normalize_advantages=True,
-        clip_value_function_loss=True,
-        target_kl=None,
-        anneal_lr=True,
-        seed=1,
-        logger=None,
+        config=None,
+        run_name="run"
     ):
         """
         Proximal Policy Optimization (PPO) algorithm implementation.
@@ -165,38 +77,44 @@ class PPO:
         self.agent = agent
         self.envs = envs
         self.optimizer = optimizer
-        self.seed = seed
+        self.seed = config['simulation']['seed']
 
-        self.num_rollout_steps = num_rollout_steps
-        self.num_envs = num_envs
-        self.batch_size = num_envs * num_rollout_steps
-        self.num_minibatches = num_minibatches
-        self.minibatch_size = self.batch_size // num_minibatches
+        self.num_rollout_steps = config['training']['num_rollout_steps']
+        self.num_envs = config['training']['num_envs']
+        self.batch_size = config['training']['num_envs'] * config['training']['num_rollout_steps']
+        self.num_minibatches = config['training']['num_minibatches']
+        self.minibatch_size = self.batch_size // config['training']['num_minibatches']
+        self.total_timesteps = config['training']['total_timesteps']
 
-        self.gamma = gamma
-        self.gae_lambda = gae_lambda
-        self.surrogate_clip_threshold = surrogate_clip_threshold
-        self.entropy_loss_coefficient = entropy_loss_coefficient
-        self.value_function_loss_coefficient = value_function_loss_coefficient
-        self.max_grad_norm = max_grad_norm
-        self.update_epochs = update_epochs
-        self.normalize_advantages = normalize_advantages
-        self.clip_value_function_loss = clip_value_function_loss
-        self.target_kl = target_kl
+        self.gamma = config['optimization']['gamma']
+        self.gae_lambda = config['optimization']['gae_lambda']
+        self.surrogate_clip_threshold = config['optimization']['surrogate_clip_threshold']
+        self.entropy_loss_coefficient = config['optimization']['entropy_loss_coefficient']
+        self.value_function_loss_coefficient = config['optimization']['value_function_loss_coefficient']
+        self.max_grad_norm = config['optimization']['max_grad_norm']
+        self.update_epochs = config['training']['update_epochs']
+        self.normalize_advantages = config['optimization']['normalize_advantages']
+        self.clip_value_function_loss = config['optimization']['clip_value_function_loss']
+        self.target_kl = config['optimization']['target_kl']
 
         self.device = next(agent.parameters()).device
 
-        self.anneal_lr = anneal_lr
-        self.initial_lr = learning_rate
+        self.anneal_lr = config['optimization']['anneal_lr']
+        self.initial_lr = config['optimization']['learning_rate']
 
         self.lr_scheduler = None
         self._global_step = 0
-        self.logger = logger or PPOLogger()
+        self.logger = PPOLogger(run_name, config['simulation']['use_tensorboard'])
+        
+        self.num_policy_updates = self.total_timesteps // (self.num_rollout_steps * self.num_envs)
+
+        if self.anneal_lr:
+            self.lr_scheduler = self.create_lr_scheduler(self.num_policy_updates)
 
     def create_lr_scheduler(self, num_policy_updates):
         return LinearLRSchedule(self.optimizer, self.initial_lr, num_policy_updates)
 
-    def learn(self, total_timesteps):
+    def learn(self):
         """
         Train the agent using the PPO algorithm.
 
@@ -224,45 +142,19 @@ class PPO:
               due to the integer division when calculating the number of updates.
             - Early stopping based on KL divergence may occur if `target_kl` is set.
         """
-        num_policy_updates = total_timesteps // (self.num_rollout_steps * self.num_envs)
-
-        if self.anneal_lr:
-            self.lr_scheduler = self.create_lr_scheduler(num_policy_updates)
-
         next_observation, is_next_observation_terminal = self._initialize_environment()
-
-        # Initialize logging variables
         self._global_step = 0
-
-        for update in range(num_policy_updates):
+        for _ in range(self.num_policy_updates):
             if self.anneal_lr:
                 self.lr_scheduler.step()
 
-            (
-                batch_observations,
-                batch_log_probabilities,
-                batch_actions,
-                batch_advantages,
-                batch_returns,
-                batch_values,
-                next_observation,
-                is_next_observation_terminal,
-            ) = self.collect_rollouts(next_observation, is_next_observation_terminal)
-
-            update_results = self.update_policy(
-                batch_observations,
-                batch_log_probabilities,
-                batch_actions,
-                batch_advantages,
-                batch_returns,
-                batch_values,
+            update_results = self.collect_rollouts_and_update_policy(
+                next_observation, is_next_observation_terminal
             )
 
             self.logger.log_policy_update(update_results, self._global_step)
-
         print(f"Training completed. Total steps: {self._global_step}")
-
-        return self.agent  # Return the trained agent
+        return self.agent
 
     def _initialize_environment(self):
         """
@@ -286,6 +178,28 @@ class PPO:
         is_initial_observation_terminal = torch.zeros(self.num_envs).to(self.device)
         return initial_observation, is_initial_observation_terminal
 
+    def collect_rollouts_and_update_policy(self, next_observation, is_next_observation_terminal):
+        (
+            batch_observations,
+            batch_log_probabilities,
+            batch_actions,
+            batch_advantages,
+            batch_returns,
+            batch_values,
+            next_observation,
+            is_next_observation_terminal,
+        ) = self.collect_rollouts(next_observation, is_next_observation_terminal)
+        update_results = self.update_policy(
+            batch_observations,
+            batch_log_probabilities,
+            batch_actions,
+            batch_advantages,
+            batch_returns,
+            batch_values,
+        )
+        return update_results
+        
+        
     def collect_rollouts(self, next_observation, is_next_observation_terminal):
         """
         Collect a set of rollout data by interacting with the environment. A rollout is a sequence of observations,
@@ -351,6 +265,7 @@ class PPO:
             next_observation, reward, terminations, truncations, infos = self.envs.step(
                 action.cpu().numpy()
             )
+
             next_observation = next_observation.reshape(self.num_envs, -1)
             self._global_step += self.num_envs
             rewards[step] = torch.as_tensor(reward, device=self.device).view(-1)

@@ -1,0 +1,32 @@
+env:
+  id: FrozenLake-v1
+  is_discrete: true
+  with_llm_states: true
+
+training:
+  num_envs: 4
+  total_timesteps: 35000
+  num_rollout_steps: 128
+  update_epochs: 4
+  num_minibatches: 4
+
+optimization:
+  learning_rate: 2.5e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  surrogate_clip_threshold: 0.2
+  entropy_loss_coefficient: 0.01
+  value_function_loss_coefficient: 0.5
+  normalize_advantages: true
+  clip_value_function_loss: true
+  max_grad_norm: 0.5
+  target_kl: null
+  anneal_lr: true
+  rpo_alpha: null
+
+simulation:
+  seed: 1
+  torch_deterministic: true
+  capture_video: true
+  use_tensorboard: false
+  save_model: true
