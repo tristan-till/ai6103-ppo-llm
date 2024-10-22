@@ -78,7 +78,7 @@ def main():
     
     agent = agent_utils.get_agent(
         envs,
-        config['env']['is_discrete'], 
+        config['env']['type'], 
         config['optimization']['rpo_alpha'], 
         device
     )

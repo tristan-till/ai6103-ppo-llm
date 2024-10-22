@@ -1,6 +1,8 @@
 import yaml
 import os
 
+import utils.enums as enums
+
 def parse_config(config_file):
     """
     Parse the YAML configuration file.
@@ -31,7 +33,7 @@ def validate_config(config):
     ValueError: If a required field is missing or has an invalid type.
     """
     required_fields = {
-        'env': ['id', 'is_discrete', 'with_llm_states'],
+        'env': ['id', 'type'],
         'training': ['num_envs', 'total_timesteps', 'num_rollout_steps', 'update_epochs', 'num_minibatches'],
         'optimization': ['learning_rate', 'gamma', 'gae_lambda', 'surrogate_clip_threshold', 
                          'entropy_loss_coefficient', 'value_function_loss_coefficient', 
@@ -41,7 +43,7 @@ def validate_config(config):
     }
 
     type_checks = {
-        'env': {'id': str, 'is_discrete': bool, 'with_llm_states': bool},
+        'env': {'id': str, 'type': int},
         'training': {'num_envs': int, 'total_timesteps': int, 'num_rollout_steps': int, 
                      'update_epochs': int, 'num_minibatches': int},
         'optimization': {'learning_rate': float, 'gamma': float, 'gae_lambda': float, 
@@ -65,7 +67,7 @@ def validate_config(config):
             if not isinstance(config[section][field], field_type):
                 raise ValueError(f"Invalid type for {section}.{field}: expected {field_type}, got {type(config[section][field])}")
             
-    if config['env']['is_discrete'] and config['optimization']['rpo_alpha'] is not None:
+    if config['env']['type'] == enums.EnvType.DISCRETE and config['optimization']['rpo_alpha'] is not None:
         print(
             f"rpo_alpha is not used in discrete environments. Ignoring rpo_alpha={config['optimization']['rpo_alpha']}"
         )

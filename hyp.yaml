@@ -1,7 +1,6 @@
 env:
   id: FrozenLake-v1
-  is_discrete: true
-  with_llm_states: true
+  type: 4 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img
 
 training:
   num_envs: 4

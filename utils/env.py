@@ -2,7 +2,9 @@ import gymnasium as gym
 import numpy as np
 
 from classes.llm_env import LLMEnv
+from classes.img_env import ImgEnv
 import utils.helpers as helpers
+import utils.enums as enums
 
 def make_discrete_env(env_id, idx, capture_video, run_name):
     if capture_video and idx == 0:
@@ -66,14 +68,23 @@ def make_llm_envs(env_id, run_name, capture_video, num_envs):
     ])
     return envs
 
+def make_img_envs(env_id, run_name, capture_video, num_envs):
+    envs = gym.vector.SyncVectorEnv([
+        lambda: ImgEnv(env_id, run_name=run_name, capture_video=capture_video) for _ in range(num_envs)
+    ])
+    return envs
+
 def create_envs(config):
     _, run_name = helpers.get_run_name(config)
     env_id = config['env']['id']
     capture_video = config['simulation']['capture_video']
     num_envs = config['training']['num_envs']
-    if config['env']['with_llm_states']:
+    env_type = config['env']['type']
+    if env_type == enums.EnvType.LLM.value:
         return make_llm_envs(env_id, run_name, capture_video, num_envs)
-    elif config['env']['is_discrete']:
+    elif env_type  == enums.EnvType.DISCRETE.value:
         return make_discrete_envs(env_id, capture_video, run_name, num_envs)
-    else:
+    elif env_type  == enums.EnvType.CONTINUOUS.value:
         return make_continuous_envs(env_id, capture_video, run_name, num_envs, config['optimization']['gamma'])
+    elif env_type  == enums.EnvType.IMG.value:
+        return make_img_envs(env_id, capture_video, run_name, num_envs)
