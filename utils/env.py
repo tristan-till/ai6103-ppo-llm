@@ -1,8 +1,8 @@
 import gymnasium as gym
 import numpy as np
 
-from classes.llm_env import LLMEnv
-from classes.img_env import ImgEnv
+from classes.envs.llm_env import LLMEnv
+from classes.envs.img_env import ImgEnv
 import utils.helpers as helpers
 import utils.enums as enums
 

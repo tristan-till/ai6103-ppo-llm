@@ -14,13 +14,14 @@ from classes.sentence_transformer import SentenceTransformer
 
 
 folder_root="states"
-arr_folder = f"{folder_root}/arr"
-base64_folder = f"{folder_root}/base64"
-image_folder = f"{folder_root}/images"
-llava_folder = f"{folder_root}/llava"
-llama_folder = f"{folder_root}/llama"
-embedding_folder = f"{folder_root}/embedding"
-flattened_arr_folder = f"{folder_root}/flat_arr"
+mode="dark"
+arr_folder = f"{folder_root}/{mode}/arr"
+base64_folder = f"{folder_root}/{mode}/base64"
+image_folder = f"{folder_root}/{mode}/images"
+llava_folder = f"{folder_root}/{mode}/llava"
+llama_folder = f"{folder_root}/{mode}/llama"
+embedding_folder = f"{folder_root}/{mode}/embedding"
+flattened_arr_folder = f"{folder_root}/{mode}/flat_arr"
 
 if not os.path.exists(arr_folder):
     os.makedirs(arr_folder)
@@ -66,7 +67,7 @@ def random_explore(env):
         state_arr = env.render()
         # save_state_arr_image(state, orientation, state_arr)
         # save_state_arr_base64(state, orientation, state_arr)
-        save_state_arr(state, orientation, state_arr)
+        # save_state_arr(state, orientation, state_arr)
         if reward > 1.0 or done:
             state, _ = env.reset()
 
@@ -127,14 +128,46 @@ def save_flattened_arr_from_arr():
             flattened_arr = arr.flatten()
             flat_arr_file_path = os.path.join(flattened_arr_folder, filename.split(".")[0])
             np.save(f'{flat_arr_file_path}.npy', flattened_arr)
+            
+def save_flat_arr_from_img():
+    if not os.path.exists(flattened_arr_folder):
+        os.makedirs(flattened_arr_folder)
+
+    for filename in os.listdir(image_folder):
+        if filename.endswith(".png"):
+            img_file_path = os.path.join(image_folder, filename)
+            image = Image.open(img_file_path).convert("RGB")
+            image = image.resize((256, 256), Image.NEAREST)
+            img_array = np.array(image)
+            flattened_arr = img_array.flatten()
+            flat_arr_file_path = os.path.join(flattened_arr_folder, filename.split(".")[0])
+            np.save(f'{flat_arr_file_path}.npy', flattened_arr)
+
+def save_base64_from_img():
+    if not os.path.exists(base64_folder):
+        os.makedirs(base64_folder)
+
+    for filename in os.listdir(image_folder):
+        if filename.endswith(".png"):
+            img_file_path = os.path.join(image_folder, filename)
+            image = Image.open(img_file_path).convert("RGB")
+            buffered = io.BytesIO()
+            image.save(buffered, format="PNG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            filename = f"{filename.split(".")[0]}.txt"
+            base64_filepath = os.path.join(base64_folder, filename)
+            with open(base64_filepath, 'w') as f:
+                f.write(img_base64)
 
 def main():
     # env = gym.make('FrozenLake-v1', desc=None, map_name="4x4", is_slippery=False, render_mode="rgb_array")
     #random_explore(env)
+    save_llama_from_llava()
+    save_embedding_from_llama()
+    # save_flattened_arr_from_arr()
+    # save_flat_arr_from_img()
+    # save_base64_from_img()
     # save_llava_from_base64()
-    # save_llama_from_llava()
-    # save_embedding_from_llama()
-    save_flattened_arr_from_arr()
     return
 
 if __name__ == '__main__':
