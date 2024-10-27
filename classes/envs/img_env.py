@@ -12,7 +12,6 @@ class ImgEnv(gym.Env):
     def __init__(self, env_id, run_name='runs', capture_video=False, black_ice=False):
         super().__init__()
         self.env_id = env_id
-        self.black_ice = black_ice
         if capture_video:
             self.env = gym.make(env_id, render_mode="rgb_array", is_slippery=False)
             self.env = gym.wrappers.RecordVideo(self.env, f"videos/{run_name}")
