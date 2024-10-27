@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -175,6 +173,7 @@ class PPO:
         """
         initial_observation, _ = self.envs.reset(seed=self.seed)
         initial_observation = torch.Tensor(initial_observation).reshape(self.num_envs, -1).to(self.device)
+
         is_initial_observation_terminal = torch.zeros(self.num_envs).to(self.device)
         return initial_observation, is_initial_observation_terminal
 
@@ -267,6 +266,7 @@ class PPO:
             )
 
             next_observation = next_observation.reshape(self.num_envs, -1)
+
             self._global_step += self.num_envs
             rewards[step] = torch.as_tensor(reward, device=self.device).view(-1)
             is_next_observation_terminal = np.logical_or(terminations, truncations)

@@ -5,36 +5,48 @@ if __name__ == '__main__':
 
 import gymnasium as gym
 import numpy as np
+from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 
 from utils.helpers import load_npy_files_to_dict
 
 class ImgEnv(gym.Env):
-    def __init__(self, env_id, run_name='runs', capture_video=False, mode='light'):
+    def __init__(self, env_id, idx, run_name='runs', capture_video=False, mode='light', use_pre_computed_states=True, size = 4):
         super().__init__()
         self.env_id = env_id
-        if capture_video:
-            self.env = gym.make(env_id, render_mode="rgb_array", is_slippery=False)
+        self.idx = idx
+        random_map = generate_random_map(size=size, p=0.7, seed = 2)
+        self.env = gym.make(env_id, render_mode="rgb_array", is_slippery=False, desc=random_map)
+
+        if capture_video and idx == 0:
             self.env = gym.wrappers.RecordVideo(self.env, f"videos/{run_name}")
-        else:
-            self.env = gym.make(env_id, render_mode=None, is_slippery=False)
+
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env)
         self.states = load_npy_files_to_dict(f"./states/{mode}/flat_arr/")
-        self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(196608,), dtype=np.float32)
+        self.img_size = size*64 # turns out grid size is n*64 by n*64 pixels
+        self.img_resolution = 128
+        self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(3*self.img_size**2,), dtype=np.float32)
         self.action_space = self.env.action_space
         self.mode = mode
+        self.use_pre_computed_states = use_pre_computed_states
         
     def reset(self, **kwargs):
         observation, info = self.env.reset(**kwargs)
-        llm_state = self.states.get(f"{observation}_1", np.zeros(196608))
+        if self.use_pre_computed_states:
+            llm_state = self.states.get(f"{observation}_1", np.zeros(3*self.img_size**2))
+        else:
+            llm_state = np.array(self.env.render(), dtype=np.uint8).flatten()
+
         return llm_state, info
     
     def step(self, action):
         next_observation, reward, termination, truncations, infos = self.env.step(action)
-        img_state = self.states.get(f"{next_observation}_{action}", np.zeros(196608))
+        if self.use_pre_computed_states:
+            img_state = self.states.get(f"{next_observation}_{action}", np.zeros(3*self.img_size**2))
+        else:
+            img_state = np.array(self.env.render(), dtype=np.uint8).flatten()
+
         return img_state, reward, termination, truncations, infos
     
-    def render(self, mode='human'):
-        return self.env.render(mode)
 
     def close(self):
         self.env.close()

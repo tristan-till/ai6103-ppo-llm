@@ -52,25 +52,23 @@ def make_continuous_envs(env_id, capture_video, run_name, num_envs, gamma):
 
 def make_discrete_envs(env_id, capture_video, run_name, num_envs):
     envs = gym.vector.SyncVectorEnv(
-        [
-            make_discrete_env(env_id, i, capture_video, run_name)
-            for i in range(num_envs)
-        ],
+        lambda: make_discrete_env(env_id, i, capture_video, run_name) for i in range(num_envs)
     )
     assert isinstance(
             envs.single_action_space, gym.spaces.Discrete
         ), "only discrete action space is supported"
     return envs
 
-def make_llm_envs(env_id, run_name, capture_video, num_envs):
+def make_llm_envs(env_id, capture_video, run_name, num_envs):
     envs = gym.vector.SyncVectorEnv([
         lambda: LLMEnv(env_id, run_name=run_name, capture_video=capture_video) for _ in range(num_envs)
     ])
     return envs
 
-def make_img_envs(env_id, run_name, capture_video, num_envs):
+def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size):
     envs = gym.vector.SyncVectorEnv([
-        lambda: ImgEnv(env_id, run_name=run_name, capture_video=capture_video) for _ in range(num_envs)
+        lambda idx=idx: ImgEnv(env_id, run_name=run_name, idx=idx, capture_video=capture_video, use_pre_computed_states=use_pre_computed_states, size=size)
+        for idx in range(num_envs)
     ])
     return envs
 
@@ -81,10 +79,10 @@ def create_envs(config):
     num_envs = config['training']['num_envs']
     env_type = config['env']['type']
     if env_type == enums.EnvType.LLM.value:
-        return make_llm_envs(env_id, run_name, capture_video, num_envs)
+        return make_llm_envs(env_id, capture_video, run_name, num_envs)
     elif env_type  == enums.EnvType.DISCRETE.value:
         return make_discrete_envs(env_id, capture_video, run_name, num_envs)
     elif env_type  == enums.EnvType.CONTINUOUS.value:
         return make_continuous_envs(env_id, capture_video, run_name, num_envs, config['optimization']['gamma'])
     elif env_type  == enums.EnvType.IMG.value:
-        return make_img_envs(env_id, capture_video, run_name, num_envs)
+        return make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states = config['simulation']['use_pre_computed_states'], size = config['env']['size'])

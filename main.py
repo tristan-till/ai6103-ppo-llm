@@ -1,8 +1,6 @@
 import os
 import time
 
-
-
 import numpy as np
 import torch
 import torch.optim as optim
@@ -90,6 +88,7 @@ def main():
         optimizer=optimizer,
         envs=envs,
         config=config,
+        run_name=run_name,
     )
 
     # Train the agent

@@ -1,4 +1,4 @@
-from agent import ContinuousAgent, DiscreteAgent
+from agent import ContinuousAgent, DiscreteAgent, ImgAgent
 from functools import partial
 
 import utils.enums as enums
@@ -8,7 +8,7 @@ def get_agent_class(env_type, rpo_alpha):
         enums.EnvType.DISCRETE.value: DiscreteAgent,
         enums.EnvType.CONTINUOUS.value: partial(ContinuousAgent, rpo_alpha=rpo_alpha),
         enums.EnvType.LLM.value: DiscreteAgent,
-        enums.EnvType.IMG.value: DiscreteAgent
+        enums.EnvType.IMG.value: ImgAgent
     }
     return switch[env_type]
     

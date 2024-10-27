@@ -1,10 +1,11 @@
 env:
   id: FrozenLake-v1
   type: 4 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img
+  size: 6
 
 training:
   num_envs: 4
-  total_timesteps: 35000
+  total_timesteps: 50000
   num_rollout_steps: 128
   update_epochs: 4
   num_minibatches: 4
@@ -27,5 +28,7 @@ simulation:
   seed: 1
   torch_deterministic: true
   capture_video: true
-  use_tensorboard: false
+  use_tensorboard: true
   save_model: true
+  name: v1
+  use_pre_computed_states: false
