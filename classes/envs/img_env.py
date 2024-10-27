@@ -9,7 +9,7 @@ import numpy as np
 from utils.helpers import load_npy_files_to_dict
 
 class ImgEnv(gym.Env):
-    def __init__(self, env_id, run_name='runs', capture_video=False, black_ice=False):
+    def __init__(self, env_id, run_name='runs', capture_video=False, mode='light'):
         super().__init__()
         self.env_id = env_id
         if capture_video:
@@ -18,13 +18,10 @@ class ImgEnv(gym.Env):
         else:
             self.env = gym.make(env_id, render_mode=None, is_slippery=False)
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env)
-        if not self.black_ice:
-            self.states = load_npy_files_to_dict("./states/light/flat_arr/")
-        else:
-            self.states = load_npy_files_to_dict("./states/dark/flat_arr/")
+        self.states = load_npy_files_to_dict(f"./states/{mode}/flat_arr/")
         self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(196608,), dtype=np.float32)
         self.action_space = self.env.action_space
-        self.black_ice = black_ice
+        self.mode = mode
         
     def reset(self, **kwargs):
         observation, info = self.env.reset(**kwargs)
