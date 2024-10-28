@@ -5,22 +5,27 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from ppo import PPO, PPOLogger
+from ppo import PPO
 
 import utils.helpers as helpers
 import utils.env as env_utils
 import utils.agent as agent_utils
 import utils.eval as eval_utils
 import utils.config as config_utils
+import utils.enums as enums
+import utils.plot as plot_utils
+
+from classes.data_cache import DataCache
 
 def setup():
     config = config_utils.parse_config("hyp.yaml")
+    data_cache = DataCache()
     exp_name, run_name = helpers.get_run_name(config)
     if not os.path.exists(f"runs/{run_name}/{exp_name}"):
         os.makedirs(f"runs/{run_name}/{exp_name}")
     helpers.set_seed(config['simulation']['seed'], config['simulation']['torch_deterministic'])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    return config, exp_name, run_name, device
+    return config, data_cache, exp_name, run_name, device
 
 def main():
     """
@@ -71,8 +76,8 @@ def main():
         use_tensorboard (bool): Whether to use TensorBoard for logging.
         save_model (bool): Whether to save the trained model to disk and validate this by running a simple evaluation.
     """
-    config, exp_name, run_name, device = setup()
-    envs = env_utils.create_envs(config)
+    config, data_cache, exp_name, run_name, device = setup()
+    envs = env_utils.create_envs(config, mode=enums.EnvMode.TRAIN, run_name=run_name)
     
     agent = agent_utils.get_agent(
         envs,
@@ -89,32 +94,30 @@ def main():
         envs=envs,
         config=config,
         run_name=run_name,
+        data_cache=data_cache
     )
 
     # Train the agent
     trained_agent = ppo.learn()
-
+    # run_name = "FrozenLake-v1__v3__1__1730707240"
+    # exp_name = "v3"
+    model_path = f"runs/{run_name}/{exp_name}.rl_model"
     if config['simulation']['save_model']:
-        model_path = f"runs/{run_name}/{exp_name}.rl_model"
         torch.save(trained_agent.state_dict(), model_path)
         print(f"Model saved to {model_path}")
-
-    #     eval_utils.load_and_evaluate_model(
-    #         run_name,
-    #         env_id,
-    #         env_is_discrete,
-    #         envs,
-    #         num_envs,
-    #         agent_class,
-    #         device,
-    #         model_path,
-    #         gamma,
-    #         capture_video,
-    #     )
-
-    # Close environments
-    envs.close()
-
+    
+    test_envs = env_utils.create_envs(config, mode=enums.EnvMode.TEST, run_name=run_name, data_cache=data_cache)
+    
+    eval_agent = agent_utils.get_agent(
+        test_envs,
+        config['env']['type'], 
+        config['optimization']['rpo_alpha'], 
+        device
+    )
+        
+    eval_agent.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
+    eval_utils.evaluate_model(test_envs, eval_agent, config, data_cache, device)
+    plot_utils.plot(run_name, data_cache)
 
 if __name__ == "__main__": 
     main()

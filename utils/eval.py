@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 import utils.env as env_utils
+import utils.enums as enums
 
 def get_NormalizeObservation_wrapper(self, env_num=0):
     return self.gym_sync_vec_env.envs[env_num].env.env.env
@@ -14,6 +15,30 @@ def get_obs_norm_rms_obj(self, env_num=0):
 def set_obs_norm_rms_obj(self, rms_obj, env_num=0):
     self.get_NormalizeObservation_wrapper(env_num=env_num).obs_rms = rms_obj
 
+def evaluate_model(envs, model, config, data_cache, device):
+    model.eval()
+    num_envs = config['testing']['num_envs']
+    obs, _ = envs.reset()
+    obs = torch.Tensor(obs).reshape(num_envs, -1).to(device)
+    
+    episodic_returns = []
+    num_episodes = config['testing']['num_episodes']
+    while len(episodic_returns) < num_episodes:
+        actions, _ = model.sample_action_and_compute_log_prob(
+            torch.Tensor(obs).to(device)
+        )
+        obs, _, _, _, infos = envs.step(actions.cpu().numpy())
+        obs = torch.Tensor(obs).reshape(num_envs, -1).to(device)
+        if "final_info" in infos:
+            for info in infos["final_info"]:
+                if info and "episode" in info:
+                    print(
+                        f"Eval episode {len(episodic_returns)}, episodic return: {info['episode']['r']}"
+                    )
+                    episodic_returns.append(info["episode"]["r"])
+                    data_cache.cache_reward(info["episode"]["r"], mode=enums.EnvMode.TEST)
+
+    envs.close()
 
 def load_and_evaluate_model(
     run_name,

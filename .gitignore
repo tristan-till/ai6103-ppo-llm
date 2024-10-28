@@ -167,19 +167,6 @@ tmp/
 videos/
 runs/*/events.out.tfevents.*
 
-states/**
-!states/light/
-!states/light/embedding/
-!states/light/embedding/**
-!states/light/flat_arr/
-!states/light/flat_arr/**
-
-!states/dark
-!states/dark/embedding/
-!states/dark/embedding/**
-!states/dark/flat_arr/
-!states/dark/flat_arr/**
-
-sprites/
+states/
 
 runs/

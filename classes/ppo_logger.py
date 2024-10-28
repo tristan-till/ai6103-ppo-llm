@@ -1,10 +1,13 @@
 from torch.utils.tensorboard import SummaryWriter
 from uuid import uuid4
 
+import utils.plot as plot_utils
+
 class PPOLogger:
     def __init__(self, run_name=None, use_tensorboard=False):
         self.use_tensorboard = use_tensorboard
         self.global_steps = []
+        self.run_name = run_name
         if self.use_tensorboard:
             run_name = str(uuid4()).hex if run_name is None else run_name
             self.writer = SummaryWriter(f"runs/{run_name}")

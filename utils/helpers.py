@@ -17,30 +17,26 @@ def load_npy_files_to_dict(folder_path="./states/embedding/"):
     dict: Dictionary with filename as key and NumPy array as value.
     """
     
-    # Initialize an empty dictionary to store file contents
     file_dict = {}
-    
-    # Iterate over all files in the folder
+    i = 0
     for filename in os.listdir(folder_path):
-        # Check if it's a .npy file
         if filename.endswith('.npy'):
-            # Construct the full file path
             file_path = os.path.join(folder_path, filename)
-            
             try:
-                # Load the .npy file into a NumPy array
                 array = np.load(file_path)
                 key = filename.split('.')[0]
-                # Store the NumPy array in the dictionary
                 file_dict[key] = array
+                i += 1
             except Exception as e:
                 print(f"Error loading file {filename}: {str(e)}")
-    
+    print(f"Loaded {i} cached states into memory!")
     return file_dict
 
 def get_run_name(config):
     exp_name = config['simulation']['name']
     run_name = f"{config['env']['id']}__{exp_name}__{config['simulation']['seed']}__{int(time.time())}"
+    if not os._exists(f"runs/{run_name}"):
+        os.makedirs(f"runs/{run_name}")
     return exp_name, run_name
 
 def set_seed(seed, torch_deterministic=True):

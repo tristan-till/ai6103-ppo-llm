@@ -1,5 +1,6 @@
 import gymnasium as gym
 import numpy as np
+import os
 
 from classes.envs.llm_env import LLMEnv
 from classes.envs.img_env import ImgEnv
@@ -59,32 +60,64 @@ def make_discrete_envs(env_id, capture_video, run_name, num_envs):
         ), "only discrete action space is supported"
     return envs
 
-def make_llm_envs(env_id, capture_video, run_name, num_envs):
-    envs = gym.vector.SyncVectorEnv([
-        lambda: LLMEnv(env_id, run_name=run_name, capture_video=capture_video) for _ in range(num_envs)
-    ])
+def make_llm_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, is_random, seed, mode=enums.EnvMode.TRAIN, data_cache=None, is_slippery=False):
+    def make_llm_env(idx):
+        env = LLMEnv(env_id, run_name=run_name, use_pre_computed_states=use_pre_computed_states, size=size, is_random=is_random, mode=mode, seed=seed, data_cache=data_cache, is_slippery=is_slippery)
+        if idx==0 and capture_video:
+            video_path = f"videos/{run_name}/{mode_str_from_enum(mode)}"
+            if not os._exists(video_path):
+                os.makedirs(video_path)
+            env = gym.wrappers.RecordVideo(env, video_path)
+        return env
+    envs = gym.vector.SyncVectorEnv(
+        lambda: make_llm_env(i) for i in range(num_envs)
+    )
     return envs
 
-def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, isRandom, is_slippery):
-    envs = gym.vector.SyncVectorEnv([
-        lambda idx=idx: ImgEnv(env_id, run_name=run_name, idx=idx, capture_video=capture_video, use_pre_computed_states=use_pre_computed_states, 
-                               size=size, isRandom=isRandom, is_slippery=is_slippery)
-        for idx in range(num_envs)
-    ])
+def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, is_random, is_slippery, seed, mode=enums.EnvMode.TRAIN, data_cache=None):
+    def make_img_env(idx):
+        env = ImgEnv(env_id, run_name=run_name, use_pre_computed_states=use_pre_computed_states, 
+                               size=size, is_random=is_random, mode=mode, seed=seed, data_cache=data_cache, is_slippery=is_slippery)
+        if idx==0 and capture_video:
+            video_path = f"videos/{run_name}/{mode_str_from_enum(mode)}"
+            if not os._exists(video_path):
+                os.makedirs(video_path)
+            env = gym.wrappers.RecordVideo(env, video_path)
+        return env
+    envs = gym.vector.SyncVectorEnv(
+        lambda: make_img_env(i) for i in range(num_envs)
+    )
     return envs
 
-def create_envs(config):
-    _, run_name = helpers.get_run_name(config)
+def create_envs(config, mode=enums.EnvMode.TRAIN, run_name='runs', data_cache=None):
+    mode_key = mode_str_from_enum(mode)
     env_id = config['env']['id']
+    seed = config['env']['seed']
     capture_video = config['simulation']['capture_video']
-    num_envs = config['training']['num_envs']
+    num_envs = config[mode_key]['num_envs']
     env_type = config['env']['type']
+    is_slippery = config['env']['is_slippery']
     if env_type == enums.EnvType.LLM.value:
-        return make_llm_envs(env_id, capture_video, run_name, num_envs)
+        return make_llm_envs(env_id, capture_video, run_name, num_envs, seed=seed, use_pre_computed_states = config['simulation']['use_pre_computed_states'],
+                              size = config['env']['size'], is_random=config['env']['is_random'], mode=mode, data_cache=data_cache, is_slippery=is_slippery)
     elif env_type  == enums.EnvType.DISCRETE.value:
         return make_discrete_envs(env_id, capture_video, run_name, num_envs)
     elif env_type  == enums.EnvType.CONTINUOUS.value:
         return make_continuous_envs(env_id, capture_video, run_name, num_envs, config['optimization']['gamma'])
     elif env_type  == enums.EnvType.IMG.value:
-        return make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states = config['simulation']['use_pre_computed_states'],
-                              size = config['env']['size'], isRandom=config['env']['isRandom'], is_slippery=config['env']['is_slippery'])
+        return make_img_envs(env_id, capture_video, run_name, num_envs, seed=seed, use_pre_computed_states = config['simulation']['use_pre_computed_states'],
+                              size = config['env']['size'], is_random=config['env']['is_random'], mode=mode, data_cache=data_cache, is_slippery=is_slippery)
+    
+def mode_str_from_enum(mode):
+    if mode == enums.EnvMode.TRAIN:
+        return 'training'
+    elif mode == enums.EnvMode.TEST:
+        return 'testing'
+    
+# def mode_enum_to_file_path(mode):
+#     if mode == enums.EnvMode.TRAIN.value:
+#         return 'light'
+#     elif mode == enums.EnvMode.TEST.value:
+#         return 'dark'
+#     else:
+#         raise ValueError(f"Invalid mode: {mode}")

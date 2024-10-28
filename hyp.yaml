@@ -1,16 +1,21 @@
 env:
   id: FrozenLake-v1
-  type: 4 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img
+  type: 3 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img
   size: 4
-  isRandom: false #whethere map changes at each reset. 
+  is_random: true #whethere map changes at each reset. 
+  seed: 2
   is_slippery: false #whether the agent can slip on the ice
 
 training:
   num_envs: 4
-  total_timesteps: 50000
+  total_timesteps: 25000
   num_rollout_steps: 128
   update_epochs: 4
   num_minibatches: 4
+
+testing:
+  num_envs: 2
+  num_episodes: 2500
 
 optimization:
   learning_rate: 2.5e-4
@@ -32,5 +37,5 @@ simulation:
   capture_video: true
   use_tensorboard: true
   save_model: true
-  name: v_test_slip
-  use_pre_computed_states: false
+  name: v3
+  use_pre_computed_states: true

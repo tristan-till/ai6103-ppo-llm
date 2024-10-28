@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import utils.enums as enums
+
 from classes.linear_lr_schedule import LinearLRSchedule
 from classes.ppo_logger import PPOLogger
 
@@ -12,7 +14,8 @@ class PPO:
         optimizer,
         envs,
         config=None,
-        run_name="run"
+        run_name="run",
+        data_cache=None,
     ):
         """
         Proximal Policy Optimization (PPO) algorithm implementation.
@@ -108,6 +111,8 @@ class PPO:
 
         if self.anneal_lr:
             self.lr_scheduler = self.create_lr_scheduler(self.num_policy_updates)
+            
+        self.data_cache = data_cache
 
     def create_lr_scheduler(self, num_policy_updates):
         return LinearLRSchedule(self.optimizer, self.initial_lr, num_policy_updates)
@@ -283,6 +288,10 @@ class PPO:
             )
 
             self.logger.log_rollout_step(infos, self._global_step)
+            if "final_info" in infos:
+                for info in infos["final_info"]:
+                    if info and "episode" in info:
+                        self.data_cache.cache_reward(info['episode']['r'], enums.EnvMode.TRAIN)
 
         # Estimate the value of the next state (the state after the last collected step) using the current policy
         # This value will be used in the GAE calculation to compute advantages
