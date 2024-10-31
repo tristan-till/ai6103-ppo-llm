@@ -1,1 +1,3 @@
 OLLAMA_BASE_URL = 'http://localhost:11434/api/generate'
+
+OPENAI_API_KEY = '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'
