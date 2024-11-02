@@ -65,9 +65,10 @@ def make_llm_envs(env_id, capture_video, run_name, num_envs):
     ])
     return envs
 
-def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, isRandom):
+def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, isRandom, is_slippery):
     envs = gym.vector.SyncVectorEnv([
-        lambda idx=idx: ImgEnv(env_id, run_name=run_name, idx=idx, capture_video=capture_video, use_pre_computed_states=use_pre_computed_states, size=size, isRandom=isRandom)
+        lambda idx=idx: ImgEnv(env_id, run_name=run_name, idx=idx, capture_video=capture_video, use_pre_computed_states=use_pre_computed_states, 
+                               size=size, isRandom=isRandom, is_slippery=is_slippery)
         for idx in range(num_envs)
     ])
     return envs
@@ -86,4 +87,4 @@ def create_envs(config):
         return make_continuous_envs(env_id, capture_video, run_name, num_envs, config['optimization']['gamma'])
     elif env_type  == enums.EnvType.IMG.value:
         return make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states = config['simulation']['use_pre_computed_states'],
-                              size = config['env']['size'], isRandom=config['env']['isRandom'])
+                              size = config['env']['size'], isRandom=config['env']['isRandom'], is_slippery=config['env']['is_slippery'])

@@ -3,6 +3,7 @@ env:
   type: 4 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img
   size: 4
   isRandom: false #whethere map changes at each reset. 
+  is_slippery: false #whether the agent can slip on the ice
 
 training:
   num_envs: 4
@@ -31,5 +32,5 @@ simulation:
   capture_video: true
   use_tensorboard: true
   save_model: true
-  name: v3
+  name: v_test_slip
   use_pre_computed_states: false

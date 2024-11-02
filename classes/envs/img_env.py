@@ -10,15 +10,16 @@ import random
 from utils.helpers import load_npy_files_to_dict
 
 class ImgEnv(gym.Env):
-    def __init__(self, env_id, idx, run_name='runs', capture_video=False, mode='light', use_pre_computed_states=True, size = 4, isRandom = False):
+    def __init__(self, env_id, idx, run_name='runs', capture_video=False, mode='light', use_pre_computed_states=True, size = 4, isRandom = False, is_slippery=False):
         super().__init__()
-        random.seed(2)
+        seed = 42
+        random.seed(seed)
         self.env_id = env_id
         self.idx = idx
         self.size = size
         self.isRandom = isRandom
-        random_map = generate_random_map(size=size, p=0.7, seed = 2)
-        self.env = gym.make(env_id, render_mode="rgb_array", is_slippery=False, desc=random_map)
+        random_map = generate_random_map(size=size, p=0.4, seed = seed)
+        self.env = gym.make(env_id, render_mode="rgb_array", is_slippery=is_slippery, desc=random_map)
 
         if capture_video and idx == 0:
             self.env = gym.wrappers.RecordVideo(self.env, f"videos/{run_name}")

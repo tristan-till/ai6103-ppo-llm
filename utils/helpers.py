@@ -73,8 +73,8 @@ def preprocess_observation(next_observation, img_size):
     next_observation = F.interpolate(next_observation, size=(128, 128), mode='bilinear', align_corners=False)
     
     # Squeeze batch dimension if input was single image
-    if next_observation.size(0) == 1:
-        next_observation = next_observation.squeeze(0)
+    # if next_observation.size(0) == 1:
+    #     next_observation = next_observation.squeeze(0)
 
     next_observation = next_observation / 255.0  # normalize
 
