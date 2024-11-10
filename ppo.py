@@ -156,6 +156,9 @@ class PPO:
             )
 
             self.logger.log_policy_update(update_results, self._global_step)
+            if self.data_cache.train_rewards[-500:].count(1) > 95:
+                break
+
         print(f"Training completed. Total steps: {self._global_step}")
         return self.agent
 
