@@ -58,10 +58,10 @@ def plot_rewards(train_rewards, test_rewards, run):
 
   # Plot train rewards on subplot 1
   ax1.plot(x1, train_rewards, label="True Train Rewards", color=color, linewidth=0.5)
-  ax1.plot(x1, smoothed_train, label="Smoothed Rewards (w=.95)", color='#457b9d', linewidth=1.0)
+  ax1.plot(x1, smoothed_train, label=f"Smoothed Rewards (w={weight})", color='#457b9d', linewidth=1.0)
 #   ax1.plot(x1, rolling_avg_train, label="Rolling Average", color='#000000', linewidth=1.0)
   ax2.plot(x2, test_rewards, label="True Test Rewards", color=color, linewidth=0.5)
-  ax2.plot(x2, smoothed_test, label="Smoothed Test Rewards", color='#457b9d', linewidth=1.0)
+  ax2.plot(x2, smoothed_test, label=f"Smoothed Test Rewards (w={weight})", color='#457b9d', linewidth=1.0)
 #   ax2.plot(x2, rolling_avg_test, label="Rolling Average", color='#000000', linewidth=1.0)
     
   # Labels and Legend for subplot 1
