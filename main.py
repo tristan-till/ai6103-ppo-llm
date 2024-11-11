@@ -77,10 +77,12 @@ def main():
         save_model (bool): Whether to save the trained model to disk and validate this by running a simple evaluation.
     """
     config, data_cache, exp_name, run_name, device = setup()
-    envs = env_utils.create_envs(config, mode=enums.EnvMode.TRAIN, run_name=run_name)
+    print(device)
+    train_envs = env_utils.create_envs(config, mode=enums.EnvMode.TRAIN, run_name=run_name)
+    val_envs = env_utils.create_envs(config, mode=enums.EnvMode.VAL, run_name=run_name)
     
     agent = agent_utils.get_agent(
-        envs,
+        train_envs,
         config['env']['type'], 
         config['optimization']['rpo_alpha'], 
         device
@@ -91,7 +93,8 @@ def main():
     ppo = PPO(
         agent=agent,
         optimizer=optimizer,
-        envs=envs,
+        train_envs=train_envs,
+        val_envs=val_envs,
         config=config,
         run_name=run_name,
         data_cache=data_cache

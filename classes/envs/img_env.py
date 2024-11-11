@@ -23,8 +23,8 @@ class ImgEnv(gym.Env):
         self.run_name = run_name
         self.size = size
         self.is_random = is_random
-        self.current_map = None
-        self.current_map_id = None
+        self.current_map = ["SFFF", "FHFH", "FFFH", "HFFG"]
+        self.current_map_id = "SFFFFHFHFFFHHFFG"
         self.mode = mode
         self.episodes = 0
         self.is_slippery = is_slippery
@@ -55,7 +55,8 @@ class ImgEnv(gym.Env):
         self.data_cache = data_cache
                     
     def init_env(self, env_id):
-        self.randomize_map()
+        if self.is_random:
+            self.randomize_map()
         env = gym.make(env_id, render_mode="rgb_array", desc=self.current_map, is_slippery=self.is_slippery)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)

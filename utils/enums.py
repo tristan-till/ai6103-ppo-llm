@@ -9,3 +9,4 @@ class EnvType(Enum):
 class EnvMode(Enum):
     TRAIN = 1
     TEST = 2
+    VAL = 3
