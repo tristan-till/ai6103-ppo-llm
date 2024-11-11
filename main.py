@@ -25,6 +25,7 @@ def setup():
         os.makedirs(f"runs/{run_name}/{exp_name}")
     helpers.set_seed(config['simulation']['seed'], config['simulation']['torch_deterministic'])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
     return config, data_cache, exp_name, run_name, device
 
 def main():
