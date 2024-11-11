@@ -12,7 +12,8 @@ class PPO:
         self,
         agent,
         optimizer,
-        envs,
+        train_envs,
+        val_envs,
         config=None,
         run_name="run",
         data_cache=None,
@@ -76,7 +77,8 @@ class PPO:
         the stability and speed of learning.
         """
         self.agent = agent
-        self.envs = envs
+        self.train_envs = train_envs
+        self.val_envs = val_envs
         self.optimizer = optimizer
         self.seed = config['simulation']['seed']
 
@@ -103,9 +105,12 @@ class PPO:
         self.anneal_lr = config['optimization']['anneal_lr']
         self.initial_lr = config['optimization']['learning_rate']
 
+        self.use_val = config['validation']['is_active']
+
         self.lr_scheduler = None
-        self._global_step = 0
         self.logger = PPOLogger(run_name, config['simulation']['use_tensorboard'])
+
+        self.global_step_t = 0
         
         self.num_policy_updates = self.total_timesteps // (self.num_rollout_steps * self.num_envs)
 
@@ -145,26 +150,26 @@ class PPO:
               due to the integer division when calculating the number of updates.
             - Early stopping based on KL divergence may occur if `target_kl` is set.
         """
-        next_observation, is_next_observation_terminal = self._initialize_environment()
-        self._global_step = 0
+        t_next_observation, t_is_next_observation_terminal = self._initialize_environment(self.train_envs)
+        v_next_observation, v_is_next_observation_terminal = self._initialize_environment(self.val_envs)
+        self.global_step_t = 0
         for _ in range(self.num_policy_updates):
             if self.anneal_lr:
                 self.lr_scheduler.step()
 
-            update_results = self.collect_rollouts_and_update_policy(
-                next_observation, is_next_observation_terminal
+            t_update_results = self.collect_rollouts_and_update_policy(
+                t_next_observation, t_is_next_observation_terminal, self.train_envs, enums.EnvMode.TRAIN
             )
+            if self.use_val:
+                self.collect_rollouts(
+                    v_next_observation, v_is_next_observation_terminal, self.val_envs, enums.EnvMode.VAL
+                )
 
-            self.logger.log_policy_update(update_results, self._global_step)
-            n = 1000
-            acc = 0.95
-            if self.data_cache.train_rewards[-n:].count(1) > acc*n:
-                break
-
-        print(f"Training completed. Total steps: {self._global_step}")
+            self.logger.log_policy_update(t_update_results, self.global_step_t)
+        print(f"Training completed. Total steps: {self.global_step_t}")
         return self.agent
 
-    def _initialize_environment(self):
+    def _initialize_environment(self, envs):
         """
         Initialize the environment for the start of training, resets the vectorized environments
         to their initial states and prepares the initial observation and termination flag for the agent to begin
@@ -181,13 +186,12 @@ class PPO:
             The method uses the seed set during the PPO initialization to ensure
             reproducibility of the environment's initial state across different runs.
         """
-        initial_observation, _ = self.envs.reset(seed=self.seed)
+        initial_observation, _ = envs.reset(seed=self.seed)
         initial_observation = torch.Tensor(initial_observation).reshape(self.num_envs, -1).to(self.device)
-
         is_initial_observation_terminal = torch.zeros(self.num_envs).to(self.device)
         return initial_observation, is_initial_observation_terminal
 
-    def collect_rollouts_and_update_policy(self, next_observation, is_next_observation_terminal):
+    def collect_rollouts_and_update_policy(self, next_observation, is_next_observation_terminal, envs, mode):
         (
             batch_observations,
             batch_log_probabilities,
@@ -197,7 +201,7 @@ class PPO:
             batch_values,
             next_observation,
             is_next_observation_terminal,
-        ) = self.collect_rollouts(next_observation, is_next_observation_terminal)
+        ) = self.collect_rollouts(next_observation, is_next_observation_terminal, envs, mode)
         update_results = self.update_policy(
             batch_observations,
             batch_log_probabilities,
@@ -209,7 +213,7 @@ class PPO:
         return update_results
         
         
-    def collect_rollouts(self, next_observation, is_next_observation_terminal):
+    def collect_rollouts(self, next_observation, is_next_observation_terminal, envs, mode):
         """
         Collect a set of rollout data by interacting with the environment. A rollout is a sequence of observations,
         actions, and rewards obtained by running the current policy in the environment. The collected data is crucial
@@ -253,7 +257,7 @@ class PPO:
             rewards,
             is_episode_terminated,
             observation_values,
-        ) = self._initialize_storage()
+        ) = self._initialize_storage(envs)
 
         for step in range(self.num_rollout_steps):
             # Store current observation
@@ -271,13 +275,13 @@ class PPO:
             action_log_probabilities[step] = logprob
 
             # Execute the environment and store the data
-            next_observation, reward, terminations, truncations, infos = self.envs.step(
+            next_observation, reward, terminations, truncations, infos = envs.step(
                 action.cpu().numpy()
             )
 
             next_observation = next_observation.reshape(self.num_envs, -1)
-
-            self._global_step += self.num_envs
+            if mode == enums.EnvMode.TRAIN:
+                self.global_step_t += self.num_envs
             rewards[step] = torch.as_tensor(reward, device=self.device).view(-1)
             is_next_observation_terminal = np.logical_or(terminations, truncations)
 
@@ -292,11 +296,11 @@ class PPO:
                 ),
             )
 
-            self.logger.log_rollout_step(infos, self._global_step)
+            self.logger.log_rollout_step(infos, self.global_step_t, mode)
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        self.data_cache.cache_reward(info['episode']['r'], enums.EnvMode.TRAIN)
+                        self.data_cache.cache_reward(info['episode']['r'], mode)
 
         # Estimate the value of the next state (the state after the last collected step) using the current policy
         # This value will be used in the GAE calculation to compute advantages
@@ -342,18 +346,18 @@ class PPO:
             is_next_observation_terminal,
         )
 
-    def _initialize_storage(self):
-        if self.envs.single_observation_space.dtype == 'int64':
-            a = np.array([self.envs.single_observation_space])
+    def _initialize_storage(self, envs):
+        if envs.single_observation_space.dtype == 'int64':
+            a = np.array([envs.single_observation_space])
         else:
-            a = self.envs.single_observation_space
+            a = envs.single_observation_space
         collected_observations = torch.zeros(
             (self.num_rollout_steps, self.num_envs)
             + a.shape
         ).to(self.device)
         actions = torch.zeros(
             (self.num_rollout_steps, self.num_envs)
-            + self.envs.single_action_space.shape
+            + envs.single_action_space.shape
         ).to(self.device)
         action_log_probabilities = torch.zeros(
             (self.num_rollout_steps, self.num_envs)
@@ -478,16 +482,16 @@ class PPO:
         returns,
         observation_values,
     ):
-        if self.envs.single_observation_space.dtype == 'int64':
-            a = np.array([self.envs.single_observation_space])
+        if self.train_envs.single_observation_space.dtype == 'int64':
+            a = np.array([self.train_envs.single_observation_space])
         else:
-            a = self.envs.single_observation_space
+            a = self.train_envs.single_observation_space
             
         batch_observations = collected_observations.reshape(
             (-1,) + a.shape
         )
         batch_log_probabilities = action_log_probabilities.reshape(-1)
-        batch_actions = actions.reshape((-1,) + self.envs.single_action_space.shape)
+        batch_actions = actions.reshape((-1,) + self.train_envs.single_action_space.shape)
         batch_advantages = advantages.reshape(-1)
         batch_returns = returns.reshape(-1)
         batch_values = observation_values.reshape(-1)

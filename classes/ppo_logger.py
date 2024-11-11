@@ -1,7 +1,7 @@
 from torch.utils.tensorboard import SummaryWriter
 from uuid import uuid4
 
-import utils.plot as plot_utils
+import utils.env as env_utils
 
 class PPOLogger:
     def __init__(self, run_name=None, use_tensorboard=False):
@@ -12,13 +12,13 @@ class PPOLogger:
             run_name = str(uuid4()).hex if run_name is None else run_name
             self.writer = SummaryWriter(f"runs/{run_name}")
 
-    def log_rollout_step(self, infos, global_step):
+    def log_rollout_step(self, infos, global_step, mode):
         self.global_steps.append(global_step)
         if "final_info" in infos:
             for info in infos["final_info"]:
                 if info and "episode" in info:
                     print(
-                        f"global_step={global_step}, episodic_return={info['episode']['r']}",
+                        f"mode: {env_utils.mode_str_from_enum(mode)}, global_step={global_step}, episodic_return={info['episode']['r']}",
                         flush=True,
                     )
 

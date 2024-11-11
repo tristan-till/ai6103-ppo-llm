@@ -66,7 +66,7 @@ def make_llm_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_st
         if idx==0 and capture_video:
             video_path = f"videos/{run_name}/{mode_str_from_enum(mode)}"
             if not os._exists(video_path):
-                os.makedirs(video_path)
+                os.makedirs(video_path, exist_ok=True)
             env = gym.wrappers.RecordVideo(env, video_path)
         return env
     envs = gym.vector.SyncVectorEnv(
@@ -81,7 +81,7 @@ def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_st
         if idx==0 and capture_video:
             video_path = f"videos/{run_name}/{mode_str_from_enum(mode)}"
             if not os._exists(video_path):
-                os.makedirs(video_path)
+                os.makedirs(video_path, exist_ok=True)
             env = gym.wrappers.RecordVideo(env, video_path)
         return env
     envs = gym.vector.SyncVectorEnv(
@@ -113,6 +113,8 @@ def mode_str_from_enum(mode):
         return 'training'
     elif mode == enums.EnvMode.TEST:
         return 'testing'
+    elif mode == enums.EnvMode.VAL:
+        return 'validation'
     
 # def mode_enum_to_file_path(mode):
 #     if mode == enums.EnvMode.TRAIN.value:
