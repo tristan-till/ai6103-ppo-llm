@@ -58,7 +58,7 @@ class ImgEnv(gym.Env):
         self.randomize_map()
         env = gym.make(env_id, render_mode="rgb_array", desc=self.current_map, is_slippery=self.is_slippery)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env.unwrapped.__init__(render_mode="rgb_array", is_slippery=False, desc=self.current_map)
+        env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)
         return env
         
     def load_precomputed_states(self):
@@ -72,7 +72,7 @@ class ImgEnv(gym.Env):
         self.current_map_id = "".join(self.current_map)
         
         if self.env is not None:
-            self.env.unwrapped.__init__(render_mode="rgb_array", is_slippery=False, desc=self.current_map)      
+            self.env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)      
         
     def reset(self, **kwargs):
         if self.is_random:
