@@ -17,7 +17,7 @@ import utils.env as env_utils
 class ImgEnv(gym.Env):
     def __init__(self, env_id, run_name='runs', mode=enums.EnvMode.TRAIN, 
                  use_pre_computed_states=True, size = 4, is_random = False,
-                 seed=42, data_cache=None, is_slippery=False):
+                 seed=42, data_cache=None, is_slippery=False, proba = 1/3):
         super().__init__()
         self.env_id = env_id
         self.run_name = run_name
@@ -28,6 +28,7 @@ class ImgEnv(gym.Env):
         self.mode = mode
         self.episodes = 0
         self.is_slippery = is_slippery
+        self.proba = proba
 
         self.img_size = size*64
         self.img_resolution = 128
@@ -44,6 +45,7 @@ class ImgEnv(gym.Env):
         
         self.states = {}
         self.current_action_str = "0_1"
+
         
         self.state_path = f"states/img_env/{env_utils.mode_str_from_enum(self.mode)}"
         if not os._exists(f"{self.state_path}"):
@@ -57,7 +59,7 @@ class ImgEnv(gym.Env):
     def init_env(self, env_id):
         if self.is_random:
             self.randomize_map()
-        env = gym.make(env_id, render_mode="rgb_array", desc=self.current_map, is_slippery=self.is_slippery)
+        env = gym.make(env_id, render_mode="rgb_array", desc=self.current_map, is_slippery=self.is_slippery, proba = self.proba)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
         
@@ -72,7 +74,7 @@ class ImgEnv(gym.Env):
         self.current_map_id = "".join(self.current_map)
         
         if self.env is not None:
-            self.env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)      
+            self.env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map, proba = self.proba)      
         
     def reset(self, **kwargs):
         if self.is_random:
