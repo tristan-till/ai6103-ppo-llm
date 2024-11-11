@@ -74,10 +74,11 @@ def make_llm_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_st
     )
     return envs
 
-def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, is_random, is_slippery, seed, mode=enums.EnvMode.TRAIN, data_cache=None):
+def make_img_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, is_random, is_slippery, proba, seed, mode=enums.EnvMode.TRAIN, data_cache=None):
     def make_img_env(idx):
         env = ImgEnv(env_id, run_name=run_name, use_pre_computed_states=use_pre_computed_states, 
-                               size=size, is_random=is_random, mode=mode, seed=seed, data_cache=data_cache, is_slippery=is_slippery)
+                               size=size, is_random=is_random, mode=mode, seed=seed, 
+                               data_cache=data_cache, is_slippery=is_slippery, proba = proba)
         if idx==0 and capture_video:
             video_path = f"videos/{run_name}/{mode_str_from_enum(mode)}"
             if not os._exists(video_path):
@@ -106,7 +107,7 @@ def create_envs(config, mode=enums.EnvMode.TRAIN, run_name='runs', data_cache=No
         return make_continuous_envs(env_id, capture_video, run_name, num_envs, config['optimization']['gamma'])
     elif env_type  == enums.EnvType.IMG.value:
         return make_img_envs(env_id, capture_video, run_name, num_envs, seed=seed, use_pre_computed_states = config['simulation']['use_pre_computed_states'],
-                              size = config['env']['size'], is_random=config['env']['is_random'], mode=mode, data_cache=data_cache, is_slippery=is_slippery)
+                              size = config['env']['size'], is_random=config['env']['is_random'], mode=mode, data_cache=data_cache, is_slippery=is_slippery, proba = config['env']['proba'])
     
 def mode_str_from_enum(mode):
     if mode == enums.EnvMode.TRAIN:

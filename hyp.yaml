@@ -4,11 +4,12 @@ env:
   size: 4
   is_random: false #whethere map changes at each reset. 
   seed: 2
-  is_slippery: false #whether the agent can slip on the ice
+  is_slippery: true #whether the agent can slip on the ice
+  proba: 0.3 #probability of moving in the intended direction. Only relevant if is_slippery
 
 training:
   num_envs: 4
-  total_timesteps: 50000
+  total_timesteps: 10000000
   num_rollout_steps: 128
   update_epochs: 4
   num_minibatches: 4
