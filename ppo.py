@@ -111,6 +111,7 @@ class PPO:
         self.logger = PPOLogger(run_name, config['simulation']['use_tensorboard'])
 
         self.global_step_t = 0
+        self.global_step_v = 0
         
         self.num_policy_updates = self.total_timesteps // (self.num_rollout_steps * self.num_envs)
 
@@ -153,6 +154,7 @@ class PPO:
         t_next_observation, t_is_next_observation_terminal = self._initialize_environment(self.train_envs)
         v_next_observation, v_is_next_observation_terminal = self._initialize_environment(self.val_envs)
         self.global_step_t = 0
+        self.global_step_v = 0
         for _ in range(self.num_policy_updates):
             if self.anneal_lr:
                 self.lr_scheduler.step()
@@ -280,8 +282,7 @@ class PPO:
             )
 
             next_observation = next_observation.reshape(self.num_envs, -1)
-            if mode == enums.EnvMode.TRAIN:
-                self.global_step_t += self.num_envs
+
             rewards[step] = torch.as_tensor(reward, device=self.device).view(-1)
             is_next_observation_terminal = np.logical_or(terminations, truncations)
 
@@ -295,8 +296,15 @@ class PPO:
                     device=self.device,
                 ),
             )
+    
+            if mode == enums.EnvMode.TRAIN:
+                self.global_step_t += self.num_envs
+                self.logger.log_rollout_step(infos, self.global_step_t, mode)
 
-            self.logger.log_rollout_step(infos, self.global_step_t, mode)
+            elif mode == enums.EnvMode.VAL:
+                self.global_step_v += self.num_envs
+                self.logger.log_rollout_step(infos, self.global_step_v, mode)
+
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
