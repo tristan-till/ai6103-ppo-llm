@@ -156,6 +156,74 @@ class ImgAgent(nn.Module):
         log_prob = action_dist.log_prob(actions)
         entropy = action_dist.entropy()
         return log_prob, entropy
+    
+class LLMv2Agent(nn.Module):
+    def __init__(self, envs):
+        super().__init__()
+        
+        # Define CNN network for the image part after resizing to (128, 128)
+        self.image_cnn = nn.Sequential(
+            layer_init(nn.Conv2d(3, 32, kernel_size=8, stride=4)),  # Output: (32, 30, 30)
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2)),  # Output: (64, 14, 14)
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1)),  # Output: (64, 12, 12)
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(64 * 12 * 12, 512)),
+            nn.ReLU(),
+        )
+
+        # Define linear network for the vector input
+        self.linear_net = nn.Sequential(
+            layer_init(nn.Linear(384, 256)),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, 128)),
+            nn.ReLU(),
+        )
+
+        # Combine CNN and linear outputs
+        self.combined_fc = nn.Sequential(
+            layer_init(nn.Linear(512 + 128, 512)),  # 512 from CNN, 128 from linear net
+            nn.ReLU(),
+        )
+
+        self.actor = layer_init(nn.Linear(512, envs.single_action_space.n), std=0.01)
+        self.critic = layer_init(nn.Linear(512, 1), std=1)
+        self.img_size = envs.envs[0].img_size
+
+    def estimate_value_from_observation(self, x):
+        return self.critic(self.combine(x))
+    
+    def get_action_distribution(self, x):
+        logits = self.actor(self.combine(x))
+        return Categorical(logits=logits)
+
+    def sample_action_and_compute_log_prob(self, observations):
+        action_dist = self.get_action_distribution(observations)
+        action = action_dist.sample()
+        log_prob = action_dist.log_prob(action)
+        return action, log_prob
+
+    def compute_action_log_probabilities_and_entropy(self, observations, actions):
+        action_dist = self.get_action_distribution(observations)
+        log_prob = action_dist.log_prob(actions)
+        entropy = action_dist.entropy()
+        return log_prob, entropy
+
+    def combine(self, x):
+        image_input = x[:, :256*256*3].view(-1, 3, 256, 256)
+        vector_input = x[:, 256*256*3:]
+
+        image_input = preprocess_observation(image_input, self.img_size)
+        image_output = self.image_cnn(image_input)
+        
+        vector_output = self.linear_net(vector_input)
+
+        combined_input = torch.cat((image_output, vector_output), dim=1)
+        combined_output = self.combined_fc(combined_input)
+        
+        return combined_output
 
 class ContinuousAgent(BaseAgent):
     def __init__(self, envs, rpo_alpha=None):

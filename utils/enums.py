@@ -5,6 +5,7 @@ class EnvType(Enum):
     DISCRETE = 2
     LLM = 3
     IMG = 4
+    LLMv2 = 5
     
 class EnvMode(Enum):
     TRAIN = 1

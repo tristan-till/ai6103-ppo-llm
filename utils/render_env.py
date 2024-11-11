@@ -113,6 +113,15 @@ def base64_from_state_arr(state_arr):
     img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return img_base64
 
+def render_img_and_embedding(grid, state_str, mode):
+    render = render_arr(grid, state_str, mode)
+    base64_img = base64_from_state_arr(render)
+    llava = req.get_llava(base64_img)
+    llama = req.get_llama(llava)
+    embedding = sentence_transformer.encode(llama)
+    state = np.append(render.flatten(), embedding)
+    return state
+
 def render_embedding(grid, state_str, mode):
     render = render_arr(grid, state_str, mode)
     base64_img = base64_from_state_arr(render)
@@ -125,7 +134,6 @@ def render_embedding(grid, state_str, mode):
 if __name__ == '__main__':
     grid = 'SHHHFFFFFFHFHFFGHHHHHFFFF'
     state_str = '0_0'
-    background = render_state(grid, state_str, black_ice=True)
-    background.save("grid_image.png")
+    background = render_img_and_embedding(grid, state_str, black_ice=True)
     
     

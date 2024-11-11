@@ -4,6 +4,7 @@ import os
 
 from classes.envs.llm_env import LLMEnv
 from classes.envs.img_env import ImgEnv
+from classes.envs.llmv2_env import LLMv2Env
 import utils.helpers as helpers
 import utils.enums as enums
 
@@ -60,6 +61,20 @@ def make_discrete_envs(env_id, capture_video, run_name, num_envs):
         ), "only discrete action space is supported"
     return envs
 
+def make_llmv2_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, is_random, seed, mode=enums.EnvMode.TRAIN, data_cache=None, is_slippery=False):
+    def make_llmv2_env(idx):
+        env = LLMv2Env(env_id, run_name=run_name, use_pre_computed_states=use_pre_computed_states, size=size, is_random=is_random, mode=mode, seed=seed, data_cache=data_cache, is_slippery=is_slippery)
+        if idx==0 and capture_video:
+            video_path = f"videos/{run_name}/{mode_str_from_enum(mode)}"
+            if not os._exists(video_path):
+                os.makedirs(video_path, exist_ok=True)
+            env = gym.wrappers.RecordVideo(env, video_path)
+        return env
+    envs = gym.vector.SyncVectorEnv(
+        lambda: make_llmv2_env(i) for i in range(num_envs)
+    )
+    return envs
+
 def make_llm_envs(env_id, capture_video, run_name, num_envs, use_pre_computed_states, size, is_random, seed, mode=enums.EnvMode.TRAIN, data_cache=None, is_slippery=False):
     def make_llm_env(idx):
         env = LLMEnv(env_id, run_name=run_name, use_pre_computed_states=use_pre_computed_states, size=size, is_random=is_random, mode=mode, seed=seed, data_cache=data_cache, is_slippery=is_slippery)
@@ -97,7 +112,10 @@ def create_envs(config, mode=enums.EnvMode.TRAIN, run_name='runs', data_cache=No
     num_envs = config[mode_key]['num_envs']
     env_type = config['env']['type']
     is_slippery = config['env']['is_slippery']
-    if env_type == enums.EnvType.LLM.value:
+    if env_type == enums.EnvType.LLMv2.value:
+        return make_llmv2_envs(env_id, capture_video, run_name, num_envs, seed=seed, use_pre_computed_states = config['simulation']['use_pre_computed_states'],
+                              size = config['env']['size'], is_random=config['env']['is_random'], mode=mode, data_cache=data_cache, is_slippery=is_slippery)
+    elif env_type == enums.EnvType.LLM.value:
         return make_llm_envs(env_id, capture_video, run_name, num_envs, seed=seed, use_pre_computed_states = config['simulation']['use_pre_computed_states'],
                               size = config['env']['size'], is_random=config['env']['is_random'], mode=mode, data_cache=data_cache, is_slippery=is_slippery)
     elif env_type  == enums.EnvType.DISCRETE.value:
