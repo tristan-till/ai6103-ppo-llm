@@ -66,6 +66,8 @@ def plot_rewards(train_rewards, val_rewards, test_rewards, run):
   ax1.plot(x1, train_rewards, label="True Train Rewards", color=color, linewidth=0.5)
   ax1.plot(x1, smoothed_train, label=f"Smoothed Rewards (w={weight})", color='#457b9d', linewidth=1.0)
 #   ax1.plot(x1, rolling_avg_train, label="Rolling Average", color='#000000', linewidth=1.0)
+  ax2.plot(x2, val_rewards, label="True Val Rewards", color=color, linewidth=0.5)
+  ax2.plot(x2, smoothed_val, label=f"Smoothed Val Rewards (w={weight})", color='#457b9d', linewidth=1.0)
   ax2.plot(x2, test_rewards, label="True Test Rewards", color=color, linewidth=0.5)
   ax2.plot(x2, smoothed_test, label=f"Smoothed Test Rewards (w={weight})", color='#457b9d', linewidth=1.0)
 #   ax2.plot(x2, rolling_avg_test, label="Rolling Average", color='#000000', linewidth=1.0)
