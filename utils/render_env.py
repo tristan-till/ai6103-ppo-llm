@@ -88,7 +88,8 @@ def place_agent(background, state_str, size, holes):
 def render_arr(grid, state_str, mode=enums.EnvMode.TRAIN):
     img = render_state(grid, state_str, mode)
     img = img.convert("RGB")
-    img = img.resize((256, 256), Image.NEAREST)
+    size = int(np.sqrt(len(grid))*64)
+    img = img.resize((size, size), Image.NEAREST)
     img = np.array(img, dtype=np.uint8)
     return img
 

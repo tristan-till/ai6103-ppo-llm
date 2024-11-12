@@ -23,8 +23,14 @@ class ImgEnv(gym.Env):
         self.run_name = run_name
         self.size = size
         self.is_random = is_random
-        self.current_map = ["SFFF", "FHFH", "FFFH", "HFFG"]
-        self.current_map_id = "SFFFFHFHFFFHHFFG"
+        if size == 4:
+            self.current_map = ["SFFF", "FHFH", "FFFH", "HFFG"]
+        elif size == 6:
+            self.current_map = ["SFFFFF", "FHFHFF", "FFFHFF", "FFHFFG"]
+
+        else:
+            raise ValueError("Invalid size")
+        self.current_map_id = "".join(self.current_map)
         self.mode = mode
         self.episodes = 0
         self.is_slippery = is_slippery
