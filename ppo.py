@@ -169,8 +169,8 @@ class PPO:
 
             self.logger.log_policy_update(t_update_results, self.global_step_t)
             #break if converged
-            n = 1000
-            acc = 0.98
+            n = 1000000
+            acc = 1
             if self.data_cache.train_rewards[-n:].count(1) > acc*n:
                 break
         print(f"Training completed. Total steps: {self.global_step_t}")
