@@ -14,7 +14,7 @@ import utils.enums as enums
 import utils.render_env as render_utils
 import utils.env as env_utils
 
-class LLMEnv(gym.Env):
+class LLMv2Env(gym.Env):
     def __init__(self, env_id, run_name='runs', mode=enums.EnvMode.TRAIN, 
                  use_pre_computed_states=True, size = 4, is_random = False,
                  seed=42, data_cache=None, is_slippery=False):
@@ -31,6 +31,7 @@ class LLMEnv(gym.Env):
 
         self.img_size = size*64
         self.img_resolution = 128
+        self.embedding_size = 384
         self.render_mode='rgb_array'
         
         self.seed = seed
@@ -39,13 +40,13 @@ class LLMEnv(gym.Env):
         self.env = None
         self.env = self.init_env(env_id)
         
-        self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(384,), dtype=np.float32)
+        self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(3*self.img_size**2 + self.embedding_size,), dtype=np.float32)
         self.action_space = self.env.action_space
         
         self.states = {}
         self.current_action_str = "0_1"
         
-        self.state_path = f"states/llm_env/{env_utils.mode_str_from_enum(self.mode)}"
+        self.state_path = f"states/llmv2_env/{env_utils.mode_str_from_enum(self.mode)}"
         if not os._exists(f"{self.state_path}"):
             os.makedirs(f"{self.state_path}", exist_ok=True)
         
@@ -84,7 +85,7 @@ class LLMEnv(gym.Env):
     def get_state(self):
         key = f"{self.current_map_id}_{self.current_action_str}"
         if key not in self.states:
-            img = render_utils.render_embedding(self.current_map_id, self.current_action_str, self.mode)
+            img = render_utils.render_img_and_embedding(self.current_map_id, self.current_action_str, self.mode)
             self.states[key] = img
             np.save(f"{self.state_path}/{self.current_map_id}_{self.current_action_str}", img)
         return self.states[key]

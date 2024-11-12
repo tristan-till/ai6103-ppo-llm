@@ -1,6 +1,6 @@
 env:
   id: FrozenLake-v1
-  type: 4 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img
+  type: 5 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img, 5 = llmv2
   size: 4
   is_random: false #whethere map changes at each reset. 
   seed: 2
