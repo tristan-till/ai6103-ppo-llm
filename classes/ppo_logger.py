@@ -28,45 +28,46 @@ class PPOLogger:
                             self.writer.add_scalar(
                                 "charts/episodic_return", info["episode"]["r"], global_step
                             )
-                            self.writer.add_scalar(
-                                "charts/episodic_length", info["episode"]["l"], global_step
-                            )
+                            # self.writer.add_scalar(
+                            #     "charts/episodic_length", info["episode"]["l"], global_step
+                            # )
                         elif mode == enums.EnvMode.VAL:
                             self.writer.add_scalar(
                                 "charts/episodic_return_val", info["episode"]["r"], global_step
                             )
-                            self.writer.add_scalar(
-                                "charts/episodic_length_val", info["episode"]["l"], global_step
-                            )
+                            # self.writer.add_scalar(
+                            #     "charts/episodic_length_val", info["episode"]["l"], global_step
+                            # )
 
             else:
                 print("global_step={}".format(global_step), flush=True)
                 
     def log_policy_update(self, update_results, global_step):
-        if self.use_tensorboard:
-            self.writer.add_scalar(
-                "losses/policy_loss", update_results["policy_loss"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/value_loss", update_results["value_loss"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/entropy_loss", update_results["entropy_loss"], global_step
-            )
+        return
+        # if self.use_tensorboard:
+            # self.writer.add_scalar(
+            #     "losses/policy_loss", update_results["policy_loss"], global_step
+            # )
+            # self.writer.add_scalar(
+            #     "losses/value_loss", update_results["value_loss"], global_step
+            # )
+            # self.writer.add_scalar(
+            #     "losses/entropy_loss", update_results["entropy_loss"], global_step
+            # )
 
-            self.writer.add_scalar(
-                "losses/kl_divergence", update_results["old_approx_kl"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/kl_divergence", update_results["approx_kl"], global_step
-            )
-            self.writer.add_scalar(
-                "losses/clipping_fraction",
-                update_results["clipping_fractions"],
-                global_step,
-            )
-            self.writer.add_scalar(
-                "losses/explained_variance",
-                update_results["explained_variance"],
-                global_step,
-            )
+            # self.writer.add_scalar(
+            #     "losses/kl_divergence", update_results["old_approx_kl"], global_step
+            # )
+            # self.writer.add_scalar(
+            #     "losses/kl_divergence", update_results["approx_kl"], global_step
+            # )
+            # self.writer.add_scalar(
+            #     "losses/clipping_fraction",
+            #     update_results["clipping_fractions"],
+            #     global_step,
+            # )
+            # self.writer.add_scalar(
+            #     "losses/explained_variance",
+            #     update_results["explained_variance"],
+            #     global_step,
+            # )
