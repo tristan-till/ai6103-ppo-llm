@@ -2,10 +2,10 @@ env:
   id: FrozenLake-v1
   type: 5 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img, 5 = llmv2
   size: 4
-  is_random: false #whethere map changes at each reset. 
+  is_random: true #whethere map changes at each reset. 
   seed: 2
-  is_slippery: true #whether the agent can slip on the ice
-  proba: 0.3 #probability of moving in the intended direction. Only relevant if is_slippery
+  is_slippery: false #whether the agent can slip on the ice
+  proba: 0.95 #probability of moving in the intended direction. Only relevant if is_slippery
 
 training:
   num_envs: 4
@@ -19,8 +19,8 @@ validation:
   num_envs: 4
 
 testing:
-  num_envs: 2
-  num_episodes: 1000
+  num_envs: 4
+  num_episodes: 250
 
 optimization:
   learning_rate: 2.5e-4
@@ -39,8 +39,8 @@ optimization:
 simulation:
   seed: 1
   torch_deterministic: true
-  capture_video: true
+  capture_video: false
   use_tensorboard: true
   save_model: true
-  name: v3
-  use_pre_computed_states: true
+  name: v_rand_lowerP0_3
+  use_pre_computed_states: false
