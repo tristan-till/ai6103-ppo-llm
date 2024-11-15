@@ -1,15 +1,18 @@
 channels:
   - conda-forge
-  - nvidia
   - pytorch
+  - nvidia
 dependencies:
   - python=3.12
-  - pytorch=2.4.1
+  - pytorch
+  - torchvision
+  - torchaudio
   - pytorch-cuda=12.4
   - cuda-compiler=12.4
   - matplotlib=3.9.2
   - pyyaml=6.0.2
   - huggingface_hub=0.25.2
+  - sentence-transformers=2.2.2
   - pip=24.2
   - pip:
     # required for main script
@@ -20,5 +23,4 @@ dependencies:
     - pygame==2.6.0
     - tensorboard==2.17.1
     - torch-tb-profiler==0.4.3
-    - sentence_transformers==2.2.2
 
