@@ -19,8 +19,18 @@ def get_llava(image):
     """
     payload = {
         "model": "llava:7b",
-        "prompt": "Where are the character, presents and lakes (only those adjacent to the character) in the scene? Do not describe the way they look. Answer with as little words as possible. E.g. 'Character top left, present bottom right, lake below the character'; 'Character middle-left, present bottom right, lake right of character'",
-        "images": [image]
+        "prompt": """Where are the character, presents and lakes (only those adjacent to the character) in the scene? 
+        Do not describe the way they look. Answer with as little words as possible. 
+        E.g. 'Character top left, present bottom right, lake below the character'; 
+        'Character middle-left, present bottom right, lake right of character'""",
+        "images": [image],
+        "options": {
+            "seed": 42,
+            "top_k": 20,
+            "top_p": 0.9,
+            "min_p": 0.0,
+            "temperature": 0.8,
+  }
     }
 
     response = requests.post(CONST.OLLAMA_BASE_URL, json=payload)
