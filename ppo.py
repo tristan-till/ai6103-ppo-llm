@@ -282,7 +282,7 @@ class PPO:
             next_observation = next_observation.reshape(self.num_envs, -1)
             if mode == enums.EnvMode.TRAIN:
                 self.global_step_t += self.num_envs
-            rewards[step] = torch.as_tensor(reward, device=self.device).view(-1)
+            rewards[step] = torch.as_tensor(reward, device=self.device,  dtype=torch.float32,).view(-1)
             is_next_observation_terminal = np.logical_or(terminations, truncations)
 
             next_observation, is_next_observation_terminal = (
