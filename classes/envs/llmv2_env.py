@@ -60,6 +60,8 @@ class LLMv2Env(gym.Env):
             self.randomize_map()
         env = gym.make(env_id, render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)
         env = gym.wrappers.RecordEpisodeStatistics(env)
+        env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)
+
         return env
     
     def load_precomputed_states(self):
@@ -69,8 +71,16 @@ class LLMv2Env(gym.Env):
         self.states = load_npy_files_to_dict(f"{self.state_path}/")
         
     def randomize_map(self):
-        self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 1000))
+        while True:
+            self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 1000))
+            grid = ''.join(self.current_map)
+            if grid.count('H') == 4:
+                break
+            
         self.current_map_id = "".join(self.current_map) 
+
+        if self.env is not None:
+            self.env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)  
         
     def reset(self, **kwargs):
         if self.is_random:
