@@ -193,10 +193,12 @@ class LLMv2Agent(nn.Module):
         self.img_size = envs.envs[0].img_size
 
     def estimate_value_from_observation(self, x):
-        return self.critic(self.combine(x))
+        x = x.contiguous()
+        return self.critic(self.combine(x).contiguous())
     
     def get_action_distribution(self, x):
-        logits = self.actor(self.combine(x))
+        x = x.contiguous()
+        logits = self.actor(self.combine(x).contiguous())
         return Categorical(logits=logits)
 
     def sample_action_and_compute_log_prob(self, observations):
@@ -212,13 +214,13 @@ class LLMv2Agent(nn.Module):
         return log_prob, entropy
 
     def combine(self, x):
-        image_input = x[:, :256*256*3].view(-1, 3, 256, 256)
+        image_input = x[:, :256*256*3].contiguous().view(-1, 3, 256, 256)
         vector_input = x[:, 256*256*3:]
 
         image_input = preprocess_observation(image_input, self.img_size)
-        image_output = self.image_cnn(image_input)
+        image_output = self.image_cnn(image_input.contiguous())
         
-        vector_output = self.linear_net(vector_input)
+        vector_output = self.linear_net(vector_input.contiguous())
 
         combined_input = torch.cat((image_output, vector_output), dim=1)
         combined_output = self.combined_fc(combined_input)
