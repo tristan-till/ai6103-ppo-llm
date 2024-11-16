@@ -76,7 +76,7 @@ class LLMv2Env(gym.Env):
         if self.is_random:
             self.randomize_map()
         observation, info = self.env.reset(**kwargs)
-        self.current_action_str = f"{observation}_1"
+        self.current_action_str = f"{observation}_0"
         state = self.get_state()
         # state = state.flatten()
         self.episodes += 1
@@ -92,7 +92,8 @@ class LLMv2Env(gym.Env):
     
     def step(self, action):
         next_observation, reward, termination, truncations, infos = self.env.step(action)
-        self.current_action_str = f"{next_observation}_{action}"
+        if not termination:
+            self.current_action_str = f"{next_observation}_0"
         state = self.get_state()
         if self.data_cache is not None:
             x, y = int(next_observation % self.size), int(next_observation / self.size)
