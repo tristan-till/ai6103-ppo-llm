@@ -50,6 +50,7 @@ class LLMv2Env(gym.Env):
         if not os._exists(f"{self.state_path}"):
             os.makedirs(f"{self.state_path}", exist_ok=True)
         
+        self.use_pre_computed_states = use_pre_computed_states
         if use_pre_computed_states:
             self.load_precomputed_states()
 
@@ -63,14 +64,19 @@ class LLMv2Env(gym.Env):
         return env
     
     def load_precomputed_states(self):
+        return
         if not os.path.exists(f"{self.state_path}"):
             print("Folder for precomputed states not found")
             return
         self.states = load_npy_files_to_dict(f"{self.state_path}/")
+        print(list(self.states.keys())[:10])
         
     def randomize_map(self):
         self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 1000))
         self.current_map_id = "".join(self.current_map) 
+
+        if self.env is not None:
+            self.env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)
         
     def reset(self, **kwargs):
         if self.is_random:
@@ -85,9 +91,13 @@ class LLMv2Env(gym.Env):
     def get_state(self):
         key = f"{self.current_map_id}_{self.current_action_str}"
         if key not in self.states:
-            img = render_utils.render_img_and_embedding(self.current_map_id, self.current_action_str, self.mode)
-            self.states[key] = img
-            np.save(f"{self.state_path}/{self.current_map_id}_{self.current_action_str}", img)
+            if self.use_pre_computed_states and os.path.isfile(f"{self.state_path}/{key}.npy"):
+                self.states[key] = np.load(f"{self.state_path}/{key}.npy")
+            else:
+                print(f"{key} does not exist, rendering new env")
+                arr = render_utils.render_img_and_embedding(self.current_map_id, self.current_action_str, self.mode)
+                self.states[key] = arr
+                np.save(f"{self.state_path}/{key}", arr)
         return self.states[key]
     
     def step(self, action):

@@ -2,12 +2,14 @@ from torch.utils.tensorboard import SummaryWriter
 from uuid import uuid4
 
 import utils.env as env_utils
+import utils.enums as enums
 
 class PPOLogger:
     def __init__(self, run_name=None, use_tensorboard=False):
         self.use_tensorboard = use_tensorboard
         self.global_steps = []
         self.run_name = run_name
+        self.v_counter = 0
         if self.use_tensorboard:
             run_name = str(uuid4()).hex if run_name is None else run_name
             self.writer = SummaryWriter(f"runs/{run_name}")
@@ -23,12 +25,21 @@ class PPOLogger:
                     )
 
                     if self.use_tensorboard:
-                        self.writer.add_scalar(
-                            "charts/episodic_return", info["episode"]["r"], global_step
-                        )
-                        self.writer.add_scalar(
-                            "charts/episodic_length", info["episode"]["l"], global_step
-                        )
+                        if mode == enums.EnvMode.TRAIN:
+                            self.writer.add_scalar(
+                                f"charts/episodic_return_{env_utils.mode_str_from_enum(mode)}", info["episode"]["r"], global_step
+                            )
+                            self.writer.add_scalar(
+                                f"charts/episodic_length_{env_utils.mode_str_from_enum(mode)}", info["episode"]["l"], global_step
+                            )
+                        elif mode == enums.EnvMode.VAL:
+                            self.writer.add_scalar(
+                                f"charts/episodic_return_{env_utils.mode_str_from_enum(mode)}", info["episode"]["r"], self.v_counter
+                            )
+                            self.writer.add_scalar(
+                                f"charts/episodic_length_{env_utils.mode_str_from_enum(mode)}", info["episode"]["l"], self.v_counter
+                            )
+                            self.v_counter += 1
             else:
                 print("global_step={}".format(global_step), flush=True)
                 
