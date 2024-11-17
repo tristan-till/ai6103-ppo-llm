@@ -46,7 +46,7 @@ class LLMv2Env(gym.Env):
         self.states = {}
         self.current_action_str = "0_1"
         
-        self.state_path = f"states/llmv2_env/{env_utils.mode_str_from_enum(self.mode)}"
+        self.state_path = f"states/demo1/{env_utils.mode_str_from_enum(self.mode)}"
         if not os._exists(f"{self.state_path}"):
             os.makedirs(f"{self.state_path}", exist_ok=True)
         
@@ -94,6 +94,7 @@ class LLMv2Env(gym.Env):
             if self.use_pre_computed_states and os.path.isfile(f"{self.state_path}/{key}.npy"):
                 self.states[key] = np.load(f"{self.state_path}/{key}.npy")
             else:
+                raise KeyError("Key not yet generated, current setup does not allow this")
                 print(f"{key} does not exist, rendering new env")
                 arr = render_utils.render_img_and_embedding(self.current_map_id, self.current_action_str, self.mode)
                 self.states[key] = arr

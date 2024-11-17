@@ -25,4 +25,6 @@ if __name__ == '__main__':
     while True:
         main("training")
         main("validation")
-        time.sleep(5)
+        main("testing")
+        time.sleep(1)
+    

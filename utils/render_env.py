@@ -74,11 +74,14 @@ def place_goal(background, goal):
     place_img("sprites/goal.png", background, goal)
     return background
 
+def get_agent_tile(state, size):
+    return int(state % size), int(state / size)
+
 def place_agent(background, state_str, size, holes):
     state, orientation = state_str.split("_")
     state = int(state)
     orientation_str = orientation_map[orientation]
-    agent_tile = (int(state % size), int(state / size))
+    agent_tile = get_agent_tile(state, size)
     if agent_tile not in holes:
         place_img(f"sprites/elf_{orientation_str}.png", background, agent_tile)
     else:
@@ -113,12 +116,15 @@ def base64_from_state_arr(state_arr):
     img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return img_base64
 
+def encode_str(str):
+    return sentence_transformer.encode(str)
+
 def render_img_and_embedding(grid, state_str, mode):
     render = render_arr(grid, state_str, mode)
     base64_img = base64_from_state_arr(render)
     llava = req.get_llava(base64_img)
     llama = req.get_llama(llava)
-    embedding = sentence_transformer.encode(llama)
+    embedding = encode_str(llama)
     state = np.append(render.flatten(), embedding)
     return state
 
