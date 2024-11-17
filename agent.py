@@ -138,11 +138,11 @@ class ImgAgent(nn.Module):
 
     def estimate_value_from_observation(self, x):
         x = preprocess_observation(x, self.img_size)
-        return self.critic(self.network(x))
+        return self.critic(self.network(x.contiguous()))
     
     def get_action_distribution(self, x):
         x = preprocess_observation(x, self.img_size)
-        logits = self.actor(self.network(x))
+        logits = self.actor(self.network(x.contiguous()))
         return Categorical(logits=logits)
 
     def sample_action_and_compute_log_prob(self, observations):
@@ -175,17 +175,26 @@ class LLMv2Agent(nn.Module):
         )
 
         # Define linear network for the vector input
+        # self.linear_net = nn.Sequential(
+        #     layer_init(nn.Linear(384, 256)),
+        #     nn.ReLU(),
+        #     layer_init(nn.Linear(256, 128)),
+        #     nn.ReLU(),
+        # )
+
         self.linear_net = nn.Sequential(
-            layer_init(nn.Linear(384, 256)),
-            nn.ReLU(),
-            layer_init(nn.Linear(256, 128)),
-            nn.ReLU(),
+            layer_init(nn.Linear(384,256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256,256)),
+            nn.Tanh(),
         )
+
+
 
         # Combine CNN and linear outputs
         self.combined_fc = nn.Sequential(
-            layer_init(nn.Linear(512 + 128, 512)),  # 512 from CNN, 128 from linear net
-            nn.ReLU(),
+            layer_init(nn.Linear(512 + 256, 512)),  # 512 from CNN, 128 from linear net
+            nn.Tanh(),
         )
 
         self.actor = layer_init(nn.Linear(512, envs.single_action_space.n), std=0.01)
