@@ -85,10 +85,10 @@ def place_agent(background, state_str, size, holes):
         place_img(f"sprites/cracked_hole.png", background, agent_tile)
     return background
 
-def render_arr(grid, state_str, mode=enums.EnvMode.TRAIN):
+def render_arr(grid, state_str, mode=enums.EnvMode.TRAIN, size = 256):
     img = render_state(grid, state_str, mode)
     img = img.convert("RGB")
-    img = img.resize((256, 256), Image.NEAREST)
+    img = img.resize((size, size), Image.NEAREST)
     img = np.array(img, dtype=np.uint8)
     return img
 
