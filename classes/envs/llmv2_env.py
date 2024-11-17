@@ -44,7 +44,7 @@ class LLMv2Env(gym.Env):
         self.action_space = self.env.action_space
         
         self.states = {}
-        self.current_action_str = "0_1"
+        self.current_action_str = "0_0"
         
         self.state_path = f"states/llmv2_env/{env_utils.mode_str_from_enum(self.mode)}"
         if not os._exists(f"{self.state_path}"):
