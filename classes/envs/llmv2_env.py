@@ -6,7 +6,7 @@ if __name__ == '__main__':
     sys.path.append(os.path.abspath(os.path.join(os.path.join(os.path.dirname(__file__), '..'), '..')))
 
 import gymnasium as gym
-from gymnasium.envs.toy_text.frozen_lake import generate_random_map, is_valid
+from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 import numpy as np
 
 from utils.helpers import load_npy_files_to_dict
@@ -50,7 +50,7 @@ class LLMv2Env(gym.Env):
         self.action_space = self.env.action_space
         
         self.states = {}
-        self.current_action_str = "0_1"
+        self.current_action_str = "7_0,0_1"
         
         self.state_path = f"states/llmv2_env/{env_utils.mode_str_from_enum(self.mode)}"
         if not os._exists(f"{self.state_path}"):
@@ -117,36 +117,18 @@ class LLMv2Env(gym.Env):
 
 
     def randomize_map(self):
-        valid = False
-        while not valid:
-            tmp_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 1000))
-            if self.is_ma:
-                tmp_map[0][-1] = 'S'
-                #tmp_map[-1][0] = 'G'
-                flat_board = [char for row in tmp_map for char in row]
+        self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 1000))
+        self.current_map_id = "".join(self.current_map) 
 
-                # Step 2: Find all indices of 'F' and 'H'
-                indices = [i for i, char in enumerate(flat_board) if char in ['F', 'H']]
-
-                # Step 3: Randomly select one index
-                if indices:  # Check if there are any 'F' or 'H' cells
-                    random_index = random.choice(indices)
-                    flat_board[random_index] = 'P'
-
-                # Step 4: Rebuild the board with the substituted character
-                tmp_map = ["".join(flat_board[i:i+len(board[0])]) for i in range(0, len(flat_board), len(board[0]))]
-                valid = is_valid(tmp_map, self.size)
-            else:
-                valid = True
-        self.current_map = tmp_map
-        self.current_map_id = "".join(self.current_map)
+        if self.env is not None:
+            self.env.unwrapped.__init__(render_mode="rgb_array", is_slippery=self.is_slippery, desc=self.current_map)
         
         
     def reset(self, **kwargs):
         if self.is_random:
             self.randomize_map()
         observation, info = self.env.reset(**kwargs)
-        self.current_action_str = f"{observation}_1"
+        self.current_action_str = f"{observation[0]}_1,{observation[1]}_1"
         state = self.get_state()
         # state = state.flatten()
         self.episodes += 1
@@ -163,10 +145,17 @@ class LLMv2Env(gym.Env):
     def get_platform_position(self):
         _, _, _, platform, _ = render_utils.parse_grid(self.current_map_id)
         return platform
+
+    def get_agent_position(self, agent_id):
+        agents = self.current_action_str.split(',')
+        state, orientation = agents[agent_id].split("_")
+        return render_utils.get_agent_tile(state, self.size)
     
-    def step(self, action):
-        next_observation, reward, termination, truncations, infos = self.env.step(action)
-        self.current_action_str = f"{next_observation}_{action}"
+    def step(self, action, agent_id):
+        next_observation, reward, termination, truncations, infos = self.env.step(action, agent_id)
+        tmp_str = self.current_action_str.split(',')
+        tmp_str[agent_id] = f"{next_observation}_{action}"
+        self.current_action_str = ",".join(tmp_str)
         state = self.get_state()
         if self.data_cache is not None:
             x, y = int(next_observation % self.size), int(next_observation / self.size)

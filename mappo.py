@@ -141,7 +141,7 @@ class MAPPO:
                 collected_data[agent_id]['log_probabilities'][step] = logprob
 
                 # Execute the environment step
-                next_observation, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+                next_observation, reward, terminations, truncations, infos = envs.step(action.cpu().numpy(), agent_id)
                 next_observation = next_observation.reshape(self.num_envs, -1)
 
                 if mode == enums.EnvMode.TRAIN:
@@ -149,7 +149,7 @@ class MAPPO:
 
                 # Update rewards based on platform logic
                 platform_position = self.train_envs.call("get_platform_position", indices=0)
-                agent_position = self.get_agent_position(next_observation)  # Add a method to get agent position
+                agent_position = self.train_envs.call("get_agent_position", indices=0)  # Add a method to get agent position
                 
                 # Check if the agent is on the platform
                 if agent_position == platform_position:
