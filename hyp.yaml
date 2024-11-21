@@ -1,8 +1,9 @@
 env:
   id: FrozenLake-v1
   type: 5 # 1 = continuous, 2 = discrete, 3 = llm, 4 = img, 5 = llmv2
-  size: 4
-  is_random: false #whethere map changes at each reset. 
+  size: 8
+  is_random: true #whethere map changes at each reset. 
+  is_ma: true #set true for multi-agent env
   seed: 2
   is_slippery: true #whether the agent can slip on the ice
 
