@@ -19,7 +19,7 @@ class MAPPO:
         data_cache=None,
     ):
     
-        self.agent = agents
+        self.agents = agents
         self.num_agents = len(agents)
         self.train_envs = train_envs
         self.val_envs = val_envs
@@ -63,6 +63,14 @@ class MAPPO:
             self.lr_scheduler = self.create_lr_scheduler(self.num_policy_updates)
             
         self.data_cache = data_cache
+
+        self.centralized_critic = nn.Sequential(
+            nn.Linear(self.num_agents * self.train_envs.single_observation_space.shape[0], 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 1),
+        ).to(self.device)
 
     def create_lr_scheduler(self, num_policy_updates):
         return LinearLRSchedule(self.optimizer, self.initial_lr, num_policy_updates)
@@ -162,6 +170,12 @@ class MAPPO:
                 is_next_observation_terminal[agent_id] = torch.tensor(
                     np.logical_or(terminations, truncations), dtype=torch.float32, device=self.device
                 )
+
+            combined_observations = torch.cat([next_observations[agent_id] for agent_id in range(self.num_agents)], dim=-1)
+            # Use centralized critic to estimate the value
+            global_value_estimate = self.centralized_critic(combined_observations)
+            for agent_id in range(self.num_agents):
+                collected_data[agent_id]['values'][step] = global_value_estimate.flatten()
 
             # Handle final information (outside the agent loop)
             self.logger.log_rollout_step(infos, self.global_step_t, mode)
@@ -313,7 +327,8 @@ class MAPPO:
             batch_returns,
             batch_values,
         )
-    
+
+
     def update_policy(
         self,
         collected_observations,
@@ -347,7 +362,7 @@ class MAPPO:
         batch_size = collected_observations.shape[0]
         batch_indices = np.arange(batch_size)
 
-        # Track metrics for all agents
+        # Track metrics
         aggregated_metrics = {
             "policy_loss": [],
             "value_loss": [],
@@ -358,40 +373,51 @@ class MAPPO:
             "explained_variance": [],
         }
 
-        for agent_id in range(self.num_agents):
-            agent_metrics = {
-                "policy_loss": [],
-                "value_loss": [],
-                "entropy_loss": [],
-                "old_approx_kl": [],
-                "approx_kl": [],
-                "clipping_fractions": [],
-                "explained_variance": [],
-            }
+        for epoch in range(self.update_epochs):
+            np.random.shuffle(batch_indices)
 
-            for epoch in range(self.update_epochs):
-                np.random.shuffle(batch_indices)
+            for start in range(0, batch_size, self.minibatch_size):
+                end = start + self.minibatch_size
+                minibatch_indices = batch_indices[start:end]
 
-                for start in range(0, batch_size, self.minibatch_size):
-                    end = start + self.minibatch_size
-                    minibatch_indices = batch_indices[start:end]
+                # Combine observations for all agents in the minibatch
+                combined_observations = torch.cat(
+                    [collected_observations[agent_id][minibatch_indices] for agent_id in range(self.num_agents)],
+                    dim=-1
+                )
 
-                    # Get updated log probabilities and values for the current agent's policy
+                # Compute value estimates using the centralized critic
+                new_values = self.centralized_critic(combined_observations).squeeze(-1)
+
+                # Compute advantages for the minibatch
+                minibatch_advantages = torch.cat(
+                    [computed_advantages[agent_id][minibatch_indices] for agent_id in range(self.num_agents)],
+                    dim=0
+                )
+
+                if self.normalize_advantages:
+                    minibatch_advantages = (
+                        minibatch_advantages - minibatch_advantages.mean()
+                    ) / (minibatch_advantages.std() + 1e-8)
+
+                # Compute policy losses for each agent
+                policy_losses, entropy_losses = [], []
+                for agent_id in range(self.num_agents):
                     current_policy_log_probs, entropy = self.agents[agent_id].compute_action_log_probabilities_and_entropy(
                         collected_observations[agent_id][minibatch_indices],
                         collected_actions[agent_id][minibatch_indices],
                     )
-
-                    new_value = self.agents[agent_id].estimate_value_from_observation(
-                        collected_observations[agent_id][minibatch_indices]
-                    )
-
                     log_probability_ratio = (
                         current_policy_log_probs - collected_action_log_probs[agent_id][minibatch_indices]
                     )
                     probability_ratio = log_probability_ratio.exp()
 
-                    # Estimate KL divergence
+                    policy_loss = self.calculate_policy_gradient_loss(
+                        minibatch_advantages, probability_ratio
+                    )
+                    policy_losses.append(policy_loss)
+                    entropy_losses.append(entropy.mean())
+
                     with torch.no_grad():
                         old_approx_kl = (-log_probability_ratio).mean()
                         approx_kl = ((probability_ratio - 1) - log_probability_ratio).mean()
@@ -401,67 +427,62 @@ class MAPPO:
                             (probability_ratio - 1.0).abs() > self.surrogate_clip_threshold
                         ).float().mean().item()
 
-                    minibatch_advantages = computed_advantages[agent_id][minibatch_indices]
+                    # Add metrics for KL divergence and clipping fraction
+                    aggregated_metrics["old_approx_kl"].append(old_approx_kl.item())
+                    aggregated_metrics["approx_kl"].append(approx_kl.item())
+                    aggregated_metrics["clipping_fractions"].append(clipping_fraction)
 
-                    if self.normalize_advantages:
-                        minibatch_advantages = (
-                            minibatch_advantages - minibatch_advantages.mean()
-                        ) / (minibatch_advantages.std() + 1e-8)
+                    # Early stopping based on KL divergence
+                    if self.target_kl is not None and approx_kl > self.target_kl:
+                        break
 
-                    # Compute losses
-                    policy_gradient_loss = self.calculate_policy_gradient_loss(
-                        minibatch_advantages, probability_ratio
-                    )
-                    value_function_loss = self.calculate_value_function_loss(
-                        new_value,
-                        agent_returns,
-                        agent_value_estimates,
-                        minibatch_indices,
-                    )
-                    entropy_loss = entropy.mean()
+                # Aggregate losses
+                policy_gradient_loss = torch.stack(policy_losses).mean()
+                entropy_loss = torch.stack(entropy_losses).mean()
 
-                    loss = (
-                        policy_gradient_loss
-                        - self.entropy_loss_coefficient * entropy_loss
-                        + value_function_loss * self.value_function_loss_coefficient
-                    )
+                # Compute value function loss using centralized critic
+                minibatch_returns = torch.cat(
+                    [computed_returns[agent_id][minibatch_indices] for agent_id in range(self.num_agents)],
+                    dim=0
+                )
+                value_function_loss = self.calculate_value_function_loss(
+                    new_values, minibatch_returns, previous_value_estimates[minibatch_indices]
+                )
 
-                    # Backpropagation and optimization
-                    self.optimizer.zero_grad()
-                    loss.backward()
-                    nn.utils.clip_grad_norm_(self.agents[agent_id].parameters(), self.max_grad_norm)
-                    self.optimizer.step()
+                predicted_values = new_values.detach().cpu().numpy()
+                actual_returns = minibatch_returns.cpu().numpy()
+                observed_return_variance = np.var(actual_returns)
 
-                    # Store metrics for this minibatch
-                    agent_metrics["policy_loss"].append(policy_gradient_loss.item())
-                    agent_metrics["value_loss"].append(value_function_loss.item())
-                    agent_metrics["entropy_loss"].append(entropy_loss.item())
-                    agent_metrics["old_approx_kl"].append(old_approx_kl.item())
-                    agent_metrics["approx_kl"].append(approx_kl.item())
-                    agent_metrics["clipping_fractions"].append(clipping_fraction)
+                explained_variance = (
+                    np.nan
+                    if observed_return_variance == 0
+                    else 1 - np.var(actual_returns - predicted_values) / observed_return_variance
+                )
+                aggregated_metrics["explained_variance"].append(explained_variance)
 
-                # Early stopping based on KL divergence
-                if self.target_kl is not None and approx_kl > self.target_kl:
-                    break
+                # Total loss
+                total_loss = (
+                    policy_gradient_loss
+                    - self.entropy_loss_coefficient * entropy_loss
+                    + self.value_function_loss_coefficient * value_function_loss
+                )
 
-            predicted_values = previous_value_estimates[agent_id].cpu().numpy()
-            actual_returns = computed_returns[agent_id].cpu().numpy()
-            observed_return_variance = np.var(actual_returns)
+                # Backpropagation and optimization
+                self.optimizer.zero_grad()
+                total_loss.backward()
+                nn.utils.clip_grad_norm_(self.centralized_critic.parameters(), self.max_grad_norm)
+                for agent in self.agents:
+                    nn.utils.clip_grad_norm_(agent.parameters(), self.max_grad_norm)
+                self.optimizer.step()
 
-            explained_variance = (
-                np.nan
-                if observed_return_variance == 0
-                else 1 - np.var(actual_returns - predicted_values) / observed_return_variance
-            )
-            agent_metrics["explained_variance"].append(explained_variance)
+                # Metrics for minibatch
+                aggregated_metrics["policy_loss"].append(policy_gradient_loss.item())
+                aggregated_metrics["value_loss"].append(value_function_loss.item())
+                aggregated_metrics["entropy_loss"].append(entropy_loss.item())
 
-            # Aggregate metrics for all agents
-        for key in aggregated_metrics:
-            aggregated_metrics[key].append(np.mean(agent_metrics[key]))
-
-    # Average metrics across agents
-    final_metrics = {key: np.mean(value) for key, value in aggregated_metrics.items()}
-    return final_metrics
+        # Aggregate metrics across minibatches
+        final_metrics = {key: np.mean(value) for key, value in aggregated_metrics.items()}
+        return final_metrics
 
     def calculate_policy_gradient_loss(self, minibatch_advantages, probability_ratio):
         """

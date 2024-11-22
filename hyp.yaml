@@ -4,6 +4,7 @@ env:
   size: 8
   is_random: true #whethere map changes at each reset. 
   is_ma: true #set true for multi-agent env
+  num_agents: 2
   seed: 2
   is_slippery: true #whether the agent can slip on the ice
 

@@ -80,26 +80,32 @@ def main():
     print(device)
     train_envs = env_utils.create_envs(config, mode=enums.EnvMode.TRAIN, run_name=run_name)
     val_envs = env_utils.create_envs(config, mode=enums.EnvMode.VAL, run_name=run_name)
-    
-    agent = agent_utils.get_agent(
-        train_envs,
-        config['env']['type'], 
-        config['optimization']['rpo_alpha'], 
-        device
-    )
 
-    optimizer = optim.Adam(agent.parameters(), lr=config['optimization']['learning_rate'], eps=1e-5)
+    agents = [
+        agent_utils.get_agent(
+            train_envs,
+            config['env']['type'],
+            config['optimization']['rpo_alpha'],
+            device
+        )
+        for _ in range(config['env']['num_agents'])  # num_agents defines the number of agents
+    ]
 
-    ppo = PPO(
-        agent=agent,
-        optimizer=optimizer,
+    # Initialize optimizers for all agents
+    optimizers = [
+        optim.Adam(agent.parameters(), lr=config['optimization']['learning_rate'], eps=1e-5)
+        for agent in agents
+    ]
+
+    mappo = MAPPO(
+        agents=agents,  # Pass the list of agents
+        optimizer=optimizers,  # List of optimizers corresponding to each agent
         train_envs=train_envs,
         val_envs=val_envs,
         config=config,
         run_name=run_name,
         data_cache=data_cache
     )
-
     # Train the agent
     trained_agent = ppo.learn()
     # run_name = "FrozenLake-v1__v3__1__1730707240"
