@@ -301,22 +301,29 @@ class FrozenLakeEnv(Env):
             reward = float(newletter == b"G")
             return newstate, reward, terminated
 
-        for row in range(nrow):
-            for col in range(ncol):
-                s = to_s(row, col)
-                for a in range(4):
-                    li = self.P[s][a]
-                    letter = desc[row, col]
-                    if letter in b"GH":
-                        li.append((1.0, s, 0, True))
-                    else:
-                        if is_slippery:
-                            for b in [(a - 1) % 4, a, (a + 1) % 4]:
-                                li.append(
-                                    (1.0 / 3.0, *update_probability_matrix(row, col, b))
-                                )
+        for agent_id in range(len(self.P)):  # Iterate over each agent's transition matrix
+            for row in range(nrow):
+                for col in range(ncol):
+                    s = to_s(row, col)
+                    for a in range(4):
+                        li = self.P[agent_id][s][a]  # Access the correct agent's transition matrix
+                        letter = desc[row, col]
+                        if letter in b"G":  # Goal
+                            li.append((1.0, s, 1, True))  # Reward of +1 for Goal, terminal
+                        elif letter in b"H":  # Hole
+                            li.append((1.0, s, 0, True))  # Reward of 0 for Hole, terminal
+                        elif letter in b"P":  # Platform
+                            li.append((1.0, s, 0.5, False))  # Reward of +0.5 for Platform, not terminal
                         else:
-                            li.append((1.0, *update_probability_matrix(row, col, a)))
+                            if is_slippery:
+                                # Add transitions for slippery behavior
+                                for b in [(a - 1) % 4, a, (a + 1) % 4]:
+                                    li.append(
+                                        (1.0 / 3.0, *update_probability_matrix(row, col, b))
+                                    )
+                            else:
+                                # Add transitions for non-slippery behavior
+                                li.append((1.0, *update_probability_matrix(row, col, a)))
 
         self.observation_space = spaces.Discrete(nS)
         self.action_space = spaces.Discrete(nA)
