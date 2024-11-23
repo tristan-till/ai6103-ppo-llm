@@ -4,6 +4,7 @@ from os import path
 from typing import List, Optional
 
 import numpy as np
+import random
 
 import gymnasium as gym
 from gymnasium import Env, spaces, utils
@@ -11,6 +12,7 @@ from gymnasium.envs.toy_text.utils import categorical_sample
 from gymnasium.error import DependencyNotInstalled
 from gymnasium.utils import seeding
 
+from typing import List, Tuple
 
 LEFT = 0
 DOWN = 1

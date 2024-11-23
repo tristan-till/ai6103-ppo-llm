@@ -6,6 +6,7 @@ import torch
 import torch.optim as optim
 
 from ppo import PPO
+from ppo import MAPPO
 
 import utils.helpers as helpers
 import utils.env as env_utils
@@ -107,7 +108,7 @@ def main():
         data_cache=data_cache
     )
     # Train the agent
-    trained_agent = ppo.learn()
+    trained_agent = mappo.learn()
     # run_name = "FrozenLake-v1__v3__1__1730707240"
     # exp_name = "v3"
     model_path = f"runs/{run_name}/{exp_name}.rl_model"

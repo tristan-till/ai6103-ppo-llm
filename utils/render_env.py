@@ -186,12 +186,11 @@ def render_img_and_embedding(grid, state_str, mode):
     render = render_arr(grid, state_str, mode)
     base64_img = base64_from_state_arr(render)
     #llava = req.get_llava(base64_img)
-    llava = get_custom_state_str(grid, state_str)
+    llama = get_custom_state_str(grid, state_str)
     #llama = req.get_llama(llava)
-    #embedding = sentence_transformer.encode(llama)
-    #state = np.append(render.flatten(), embedding)
-    #return state
-    return llava
+    embedding = sentence_transformer.encode(llama)
+    state = np.append(render.flatten(), embedding)
+    return state
 
 def render_embedding(grid, state_str, mode):
     render = render_arr(grid, state_str, mode)
