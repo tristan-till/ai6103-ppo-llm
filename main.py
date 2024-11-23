@@ -6,7 +6,7 @@ import torch
 import torch.optim as optim
 
 from ppo import PPO
-from ppo import MAPPO
+from mappo import MAPPO
 
 import utils.helpers as helpers
 import utils.env as env_utils

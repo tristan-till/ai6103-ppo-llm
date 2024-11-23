@@ -25,7 +25,6 @@ class MAPPO:
         self.val_envs = val_envs
         self.optimizer = optimizer
         self.seed = config['simulation']['seed']
-        self.centralized_critic = config['optimization']['centralized_critic']
 
         self.num_rollout_steps = config['training']['num_rollout_steps']
         self.num_envs = config['training']['num_envs']
@@ -45,7 +44,7 @@ class MAPPO:
         self.clip_value_function_loss = config['optimization']['clip_value_function_loss']
         self.target_kl = config['optimization']['target_kl']
 
-        self.device = next(agent.parameters()).device
+        self.device = next(agents[0].parameters()).device
 
         self.anneal_lr = config['optimization']['anneal_lr']
         self.initial_lr = config['optimization']['learning_rate']
