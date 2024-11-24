@@ -212,8 +212,8 @@ class LLMv2Agent(nn.Module):
         return log_prob, entropy
 
     def combine(self, x):
-        image_input = x[:, :256*256*3].view(-1, 3, 256, 256)
-        vector_input = x[:, 256*256*3:]
+        image_input = x[:, :512*512*3].view(-1, 3, 512, 512)
+        vector_input = x[:, 512*512*3:]
 
         image_input = preprocess_observation(image_input, self.img_size)
         image_output = self.image_cnn(image_input)

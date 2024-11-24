@@ -16,6 +16,7 @@ orientation_map = {
     "2": "right",
     "3": "up"
 }
+sentence_transformer = SentenceTransformer("all-MiniLM-L6-v2")
 
 def get_agent_tile(state, size):
     return int(state % size), int(state / size)
@@ -156,7 +157,7 @@ def place_agent(background, state_lst, size, holes):
 def render_arr(grid, state_str, mode=enums.EnvMode.TRAIN):
     img = render_state(grid, state_str, mode)
     img = img.convert("RGB")
-    img = img.resize((256, 256), Image.NEAREST)
+    img = img.resize((512, 512), Image.NEAREST)
     img = np.array(img, dtype=np.uint8)
     return img
 
