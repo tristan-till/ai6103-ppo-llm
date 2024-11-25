@@ -102,7 +102,7 @@ class LLMv2Env(gym.Env):
                 self.states[key] = np.load(f"{self.state_path}/{key}.npy")
             else:
                 # raise KeyError("Key not yet generated, current setup does not allow this")
-                print(f"{key} does not exist, rendering new env")
+                # print(f"{key} does not exist, rendering new env")
                 # arr = render_utils.render_img_and_embedding(self.current_map_id, self.current_action_str, self.mode)
                 _, _, arr = render_utils.render_img_and_embedding_fake(self.current_map_id, self.current_action_str, self.mode, 0)
 
