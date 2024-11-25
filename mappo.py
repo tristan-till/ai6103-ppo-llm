@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 import utils.enums as enums
 
@@ -23,7 +24,7 @@ class MAPPO:
         self.num_agents = len(agents)
         self.train_envs = train_envs
         self.val_envs = val_envs
-        self.optimizer = optimizer
+        #self.optimizer = optimizer
         self.seed = config['simulation']['seed']
 
         self.num_rollout_steps = config['training']['num_rollout_steps']
@@ -57,9 +58,6 @@ class MAPPO:
         self.global_step_t = 0
         
         self.num_policy_updates = self.total_timesteps // (self.num_rollout_steps * self.num_envs)
-
-        if self.anneal_lr:
-            self.lr_scheduler = self.create_lr_scheduler(self.num_policy_updates)
             
         self.data_cache = data_cache
 
@@ -70,6 +68,15 @@ class MAPPO:
             nn.ReLU(),
             nn.Linear(128, 1),
         ).to(self.device)
+
+        self.optimizer = optim.Adam(
+            list(self.centralized_critic.parameters()) + [param for agent in self.agents for param in agent.parameters()],
+            lr=self.initial_lr,
+            eps=1e-5
+        )
+
+        if self.anneal_lr:
+            self.lr_scheduler = self.create_lr_scheduler(self.num_policy_updates)
 
     def create_lr_scheduler(self, num_policy_updates):
         return LinearLRSchedule(self.optimizer, self.initial_lr, num_policy_updates)
@@ -131,14 +138,14 @@ class MAPPO:
 
         for step in range(self.num_rollout_steps):
             for agent_id in range(self.num_agents):
-                current_observation = next_observations[agent_id]
+                collected_data[agent_id]['observations'][step] = next_observations
 
                 # Store the termination flag for the current agent
-                collected_data[agent_id]['terminals'][step] = is_next_observation_terminal[agent_id]
+                collected_data[agent_id]['terminals'][step] = is_next_observation_terminal
 
                 with torch.no_grad():
-                    action, logprob = self.agents[agent_id].sample_action_and_compute_log_prob(current_observation)
-                    value = self.agents[agent_id].estimate_value_from_observation(current_observation)
+                    action, logprob = self.agents[agent_id].sample_action_and_compute_log_prob(next_observations)
+                    value = self.agents[agent_id].estimate_value_from_observation(next_observations)
 
                 # Flatten the value if needed
                 collected_data[agent_id]['values'][step] = value.flatten()
@@ -165,8 +172,8 @@ class MAPPO:
                 # Update rewards and next terminal status
                 collected_data[agent_id]['rewards'][step] = torch.tensor(reward, device=self.device)
 
-                next_observations[agent_id] = torch.tensor(next_observation, dtype=torch.float32).to(self.device)
-                is_next_observation_terminal[agent_id] = torch.tensor(
+                next_observations = torch.tensor(next_observation, dtype=torch.float32).to(self.device)
+                is_next_observation_terminal = torch.tensor(
                     np.logical_or(terminations, truncations), dtype=torch.float32, device=self.device
                 )
 
@@ -200,7 +207,7 @@ class MAPPO:
                     collected_data[agent_id]['values'],
                     collected_data[agent_id]['terminals'],
                     next_values[agent_id],
-                    is_next_observation_terminal[agent_id],
+                    is_next_observation_terminal,
                 )
 
         return self._flatten_multi_agent_rollout_data(collected_data, advantages, returns)
@@ -218,7 +225,7 @@ class MAPPO:
         shape = (self.num_rollout_steps, self.num_envs, self.num_agents)
         return {
             'observations': torch.zeros((self.num_rollout_steps, self.num_envs) + obs_shape.shape).to(self.device),
-            'actions': torch.zeros((self.num_rollout_steps, self.num_envs, envs.single_action_space.shape[0])).to(self.device),
+            'actions': torch.zeros((self.num_rollout_steps, self.num_envs, envs.single_action_space[0].n)).to(self.device),
             'log_probabilities': torch.zeros(self.num_rollout_steps, self.num_envs).to(self.device),
             'rewards': torch.zeros(self.num_rollout_steps, self.num_envs).to(self.device),
             'terminals': torch.zeros(self.num_rollout_steps, self.num_envs).to(self.device),
@@ -297,7 +304,7 @@ class MAPPO:
             )
             # Flatten log probabilities, actions, advantages, returns, and values
             flat_log_probabilities = agent_data['log_probabilities'].reshape(-1)
-            flat_actions = agent_data['actions'].reshape((-1,) + self.train_envs.single_action_space.shape)
+            flat_actions = agent_data['actions'].reshape((-1,) + self.train_envs.single_action_space[0].n)
             flat_advantages = advantages[agent_id].reshape(-1)
             flat_returns = returns[agent_id].reshape(-1)
             flat_values = agent_data['values'].reshape(-1)
@@ -469,9 +476,10 @@ class MAPPO:
                 # Backpropagation and optimization
                 self.optimizer.zero_grad()
                 total_loss.backward()
-                nn.utils.clip_grad_norm_(self.centralized_critic.parameters(), self.max_grad_norm)
-                for agent in self.agents:
-                    nn.utils.clip_grad_norm_(agent.parameters(), self.max_grad_norm)
+                nn.utils.clip_grad_norm_(
+                    list(self.centralized_critic.parameters()) + [param for agent in self.agents for param in agent.parameters()],
+                    self.max_grad_norm
+                )
                 self.optimizer.step()
 
                 # Metrics for minibatch

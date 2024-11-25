@@ -20,7 +20,7 @@ from classes.data_cache import DataCache
 
 def setup():
     config = config_utils.parse_config("hyp.yaml")
-    data_cache = DataCache()
+    data_cache = [DataCache(), DataCache()]
     exp_name, run_name = helpers.get_run_name(config)
     if not os.path.exists(f"runs/{run_name}/{exp_name}"):
         os.makedirs(f"runs/{run_name}/{exp_name}")
@@ -93,10 +93,10 @@ def main():
     ]
 
     # Initialize optimizers for all agents
-    optimizers = [
-        optim.Adam(agent.parameters(), lr=config['optimization']['learning_rate'], eps=1e-5)
-        for agent in agents
-    ]
+    #optimizers = [
+    #    optim.Adam(agent.parameters(), lr=config['optimization']['learning_rate'], eps=1e-5)
+    #    for agent in agents
+    #]
 
     mappo = MAPPO(
         agents=agents,  # Pass the list of agents

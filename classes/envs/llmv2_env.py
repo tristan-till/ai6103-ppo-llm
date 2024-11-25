@@ -16,6 +16,8 @@ import utils.env as env_utils
 
 from typing import List, Tuple
 
+from classes import 
+
 class LLMv2Env(gym.Env):
     def __init__(self, env_id, run_name='runs', mode=enums.EnvMode.TRAIN, 
                  use_pre_computed_states=True, size = 4, is_random = False,
