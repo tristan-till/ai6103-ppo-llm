@@ -28,3 +28,7 @@ based agent.
 To change to run language-based agent, change type to 4 in hyp.yaml.
 
 tensorboard files saved to /runs if want to inspect training curves. 
+
+
+--------------------MAPPO-----------------------------
+Work done on Multi Agent PPO can be found on branch called ricardo. 
