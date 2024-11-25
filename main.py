@@ -31,7 +31,8 @@ def setup():
 
     
     helpers.set_seed(config['simulation']['seed'], config['simulation']['torch_deterministic'])
-    device = torch.device("mps" if torch.mps.is_available() else "cpu")
+    # device = torch.device("mps" if torch.mps.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return config, data_cache, exp_name, run_name, device
 
 def main():
