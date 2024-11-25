@@ -53,6 +53,8 @@ class LLMv2Env(gym.Env):
         if use_pre_computed_states:
             self.load_precomputed_states()
 
+        self.use_pre_computed_states = use_pre_computed_states
+
         self.data_cache = data_cache
     
     def init_env(self, env_id):
@@ -65,6 +67,7 @@ class LLMv2Env(gym.Env):
         return env
     
     def load_precomputed_states(self):
+        return
         if not os.path.exists(f"{self.state_path}"):
             print("Folder for precomputed states not found")
             return
@@ -72,9 +75,9 @@ class LLMv2Env(gym.Env):
         
     def randomize_map(self):
         while True:
-            self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 1000))
+            self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 10000))
             grid = ''.join(self.current_map)
-            if grid.count('H') == 4:
+            if grid.count('H') < 40:
                 break
             
         self.current_map_id = "".join(self.current_map) 
@@ -95,9 +98,17 @@ class LLMv2Env(gym.Env):
     def get_state(self):
         key = f"{self.current_map_id}_{self.current_action_str}"
         if key not in self.states:
-            img = render_utils.render_img_and_embedding(self.current_map_id, self.current_action_str, self.mode)
-            self.states[key] = img
-            np.save(f"{self.state_path}/{self.current_map_id}_{self.current_action_str}", img)
+            if self.use_pre_computed_states and os.path.isfile(f"{self.state_path}/{key}.npy"):
+                self.states[key] = np.load(f"{self.state_path}/{key}.npy")
+            else:
+                # raise KeyError("Key not yet generated, current setup does not allow this")
+                print(f"{key} does not exist, rendering new env")
+                # arr = render_utils.render_img_and_embedding(self.current_map_id, self.current_action_str, self.mode)
+                _, _, arr = render_utils.render_img_and_embedding_fake(self.current_map_id, self.current_action_str, self.mode, 0)
+
+                self.states[key] = arr
+                np.save(f"{self.state_path}/{key}", arr)
+
         return self.states[key]
     
     def step(self, action):
