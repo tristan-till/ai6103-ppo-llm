@@ -14,6 +14,7 @@ import utils.eval as eval_utils
 import utils.config as config_utils
 import utils.enums as enums
 import utils.plot as plot_utils
+import shutil
 
 from classes.data_cache import DataCache
 
@@ -23,6 +24,12 @@ def setup():
     exp_name, run_name = helpers.get_run_name(config)
     if not os.path.exists(f"runs/{run_name}/{exp_name}"):
         os.makedirs(f"runs/{run_name}/{exp_name}")
+
+    # copy config
+    dst = f"runs/{run_name}/{exp_name}/hyp.yaml"
+    shutil.copy("hyp.yaml", dst)
+
+    
     helpers.set_seed(config['simulation']['seed'], config['simulation']['torch_deterministic'])
     device = torch.device("mps" if torch.mps.is_available() else "cpu")
     return config, data_cache, exp_name, run_name, device
