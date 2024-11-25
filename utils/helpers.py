@@ -57,7 +57,7 @@ def preprocess_observation(next_observation, img_size):
     torch.Tensor: The preprocessed observation tensor.
     """
 
-    next_observation = next_observation.view(-1, img_size, img_size, 3)  # reshape
+    next_observation = next_observation.contiguous().view(-1, img_size, img_size, 3)  # reshape
     next_observation = next_observation.permute(0, 3, 1, 2)  # change to [n, 3, img_size, img_size]
 
     # Resize to [n, 3, 128, 128]

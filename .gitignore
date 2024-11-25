@@ -168,5 +168,5 @@ videos/
 runs/*/events.out.tfevents.*
 
 states/
-
+figures/
 runs/

@@ -69,7 +69,12 @@ class ImgEnv(gym.Env):
         self.states = load_npy_files_to_dict(f"{self.state_path}/")
         
     def randomize_map(self):
-        self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 1000))
+        while True:
+            self.current_map = generate_random_map(size=self.size, p=0.7, seed=random.randint(0, 10000))
+            grid = ''.join(self.current_map)
+            if grid.count('H') <40:
+                break
+
         self.current_map_id = "".join(self.current_map)
         
         if self.env is not None:
@@ -88,7 +93,7 @@ class ImgEnv(gym.Env):
     def get_state(self):
         key = f"{self.current_map_id}_{self.current_action_str}"
         if key not in self.states:
-            img = render_utils.render_arr(self.current_map_id, self.current_action_str, self.mode)
+            img = render_utils.render_arr(self.current_map_id, self.current_action_str, self.mode, self.img_size)
             self.states[key] = img
             np.save(f"{self.state_path}/{key}", img)
         return self.states[key]        

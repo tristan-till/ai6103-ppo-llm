@@ -137,7 +137,8 @@ def save_flat_arr_from_img():
         if filename.endswith(".png"):
             img_file_path = os.path.join(image_folder, filename)
             image = Image.open(img_file_path).convert("RGB")
-            image = image.resize((256, 256), Image.NEAREST)
+            size = 6*64
+            image = image.resize((size, size), Image.NEAREST)
             img_array = np.array(image)
             flattened_arr = img_array.flatten()
             flat_arr_file_path = os.path.join(flattened_arr_folder, filename.split(".")[0])
