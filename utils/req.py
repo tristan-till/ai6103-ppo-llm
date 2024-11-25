@@ -19,7 +19,7 @@ def get_llava(image):
     """
     payload = {
         "model": "llava:7b",
-        "prompt": "Where are the character, presents and lakes (only those adjacent to the character) in the scene? Do not describe the way they look. Answer with as little words as possible. E.g. 'Character top left, present bottom right, lake below the character'; 'Character middle-left, present bottom right, lake right of character'",
+        "prompt": "You will be presented with a 2d-scene of a agent, a present and lakes. The agent must walk towards the present and can move up, down, right and left. It is not allowed to fall into the lake. Please answer short and concisely. Where is the agent, where is the present, where are the lakes in the scene? E.g. 'Agent top left, present bottom right, lakes in the top right, center and bottom left'; 'Agent bottom left, present bottom right, two lakes bottom left'; 'Agent top right, present top left, three lakes in the center'",
         "images": [image]
     }
 
@@ -47,7 +47,7 @@ def get_llama(prompt):
     """
     payload = {
         "model": "llama3.2:1b",
-        "prompt": f"Please summarize the information in this description. It is a rendered frame of a reinforcement learning algorithm. Focus on the position of the agent, the present. The character must avoid lakes. Answer with as little words as possible (e.g. character bottom left, present bottom right, lake on top of the character): {prompt}"
+        "prompt": f"Please summarize the information in this description. It is a rendered frame of a reinforcement learning algorithm. Focus on the position of the agent, the lakes and the present. The character must avoid lakes. Answer with as little words as possible (e.g. 'Agent bottom left, present bottom right, lake on top of the agent'; 'Agent top right, present bottom left, no lake next to agent'; 'Agent top left, present top left, lake above and below agent'): {prompt}"
     }
 
     response = requests.post(CONST.OLLAMA_BASE_URL, json=payload, stream=True)

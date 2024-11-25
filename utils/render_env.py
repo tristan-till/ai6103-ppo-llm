@@ -119,6 +119,35 @@ def base64_from_state_arr(state_arr):
 def encode_str(str):
     return sentence_transformer.encode(str)
 
+def get_custom_state_str(grid, agent):
+    agent_tile = get_agent_tile(int(agent), 4)
+    _, _, _, holes = parse_grid(grid)
+    agent_x, agent_y = agent_tile
+    embedd_str = "Agent "
+    embedd_str += "top " if agent_y < 2 else "bottom "
+    embedd_str += "left, " if agent_x < 2 else "right, "
+
+    for hole in holes:
+        hole_x, hole_y = hole
+        if agent_x == hole_x - 1 and agent_y == hole_y:
+            embedd_str += "lake right of agent, "
+        elif agent_x == hole_x + 1 and agent_y == hole_y:
+            embedd_str += "Lake left of player, "
+        elif agent_y == hole_y - 1 and agent_x == hole_x:
+            embedd_str += "lake below agent, "
+        elif agent_y == hole_x + 1 and agent_x == hole_x:
+            embedd_str += "lake above agent, "
+
+    embedd_str += "present bottom right."
+    return embedd_str
+
+def get_llava(grid, state_str, mode):
+    render = render_arr(grid, state_str, mode)
+    base64_img = base64_from_state_arr(render)
+    llava = req.get_llava(base64_img)
+    return llava
+
+
 def render_img_and_embedding(grid, state_str, mode):
     render = render_arr(grid, state_str, mode)
     base64_img = base64_from_state_arr(render)

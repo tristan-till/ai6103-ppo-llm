@@ -92,6 +92,65 @@ def custom_embeddings():
             i += 1
             print(f"{i}/{total}")
 
+import matplotlib.pyplot as plt
+
+def cosine_distances():
+    original_grid = "SFFFFHFHFFFHHFFG"
+    embeddings = []
     
+    # Generate embeddings for each agent
+    for i in range(16):
+        agent = i
+        state_str = get_custom_state_str(original_grid, agent)
+        embedding = render_env.encode_str(state_str)
+        embeddings.append(embedding)
+    
+    print(len(embeddings))
+    similarity_matrix = np.zeros((16, 16))
+    from PIL import Image
+    img = render_env.render_state(original_grid, "0_1", enums.EnvMode.TRAIN)
+    img = img.convert("RGB")
+    img = img.resize((256, 256), Image.NEAREST)
+    bg_image = img.transpose(Image.FLIP_LEFT_RIGHT)
+        
+    # Convert the flipped image to a format suitable for imshow
+    bg_image = np.array(bg_image)
+    fig, ax = plt.subplots()
+
+    # Display the background image
+    ax.imshow(bg_image, extent=[3.5, -0.5, 3.5, -0.5], aspect='auto', zorder=0)
+    
+    # Calculate cosine similarity between embeddings
+    for i, embedding in enumerate(embeddings):
+        for j, other_embedding in enumerate(embeddings):
+            cos_sim = np.dot(embedding, other_embedding) / (
+                np.linalg.norm(embedding) * np.linalg.norm(other_embedding)
+            )
+            similarity_matrix[i, j] = cos_sim
+        
+        pos_dist = similarity_matrix[i]
+        pos_dist = np.reshape(pos_dist, (4, 4))
+        
+        # Create a heatmap with annotations
+        heatmap = ax.imshow(pos_dist, cmap="coolwarm", interpolation="nearest", vmin=0, vmax=1, alpha=0.5)
+        
+        # Add color bar
+        plt.colorbar(heatmap)
+        
+        # Annotate each cell with the numeric value
+        for (j, k), val in np.ndenumerate(pos_dist):
+            plt.text(k, j, f"{val:.2f}", ha='center', va='center', color='black')
+        
+        plt.title("Cosine Similarity Heatmap Between States")
+        plt.xlabel("State Index")
+        plt.ylabel("State Index")
+        plt.xticks(ticks=np.arange(4), labels=np.arange(4))
+        plt.yticks(ticks=np.arange(4), labels=np.arange(4))
+        
+        plt.show()
+        return
+    
+
 if __name__ == '__main__':
-    custom_embeddings()
+    # custom_embeddings()
+    cosine_distances()
