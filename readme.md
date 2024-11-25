@@ -32,3 +32,5 @@ tensorboard files saved to /runs if want to inspect training curves.
 
 --------------------MAPPO-----------------------------
 Work done on Multi Agent PPO can be found on branch called ricardo. 
+mappo.py would be checked out. There is where the MAPPO class is defined,
+along with several other changes made to frozen_lake.py source code.
