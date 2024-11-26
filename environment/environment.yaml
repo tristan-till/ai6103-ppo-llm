@@ -1,4 +1,3 @@
-name: ppo-llm
 channels:
   - pytorch
   - nvidia
@@ -223,4 +222,3 @@ dependencies:
       - urllib3==2.2.3
       - werkzeug==3.0.6
       - zipp==3.20.2
-prefix: C:\Users\tillt\anaconda3\envs\ppo-llm
